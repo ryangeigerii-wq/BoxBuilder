@@ -623,6 +623,10 @@
           const areaIn2 = state.localPortEst.areaPerPortM2 * 1550.0031;
           html += `<div style='margin-top:.4rem;'><strong>Tuning (target):</strong> ${state.localPortEst.targetHz.toFixed(2)} Hz (est)</div>`;
           html += `<div><strong>Est Port Len/Port:</strong> ${physIn.toFixed(2)} in (A=${areaIn2.toFixed(1)} in²)</div>`;
+          if (state.port.enabled) {
+            html += `<div><strong>Ports Enabled:</strong> ${state.port.count} × ${physIn.toFixed(2)} in (each)</div>`;
+            html += `<div><strong>Total Port Disp (est):</strong> ${(areaIn2 * physIn * state.port.count).toFixed(1)} in³</div>`;
+          }
         }
         metrics.innerHTML = html;
       }
