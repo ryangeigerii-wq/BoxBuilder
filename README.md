@@ -86,6 +86,7 @@ After a push to `main`:
 | Compute button still enabled | JS patch not injected | Re-run build; verify `index.html` contains the injected `<script>` snippet |
 | Broken images | Case-sensitive path mismatch | Verify filenames in `app/static/img` and references match exactly |
 | Styles not applied | CSS not copied or cached | Clear browser cache or add a query parameter (cache bust) manually |
+| README.md served instead of builder | GitHub Pages defaulting to repo root without index or incorrect base path | Ensure `dist/index.html` created; script now injects `<base href="/BoxBuilder/">` and rewrites `/static/` → `static/`; redeploy |
 
 ### Extending Static Export
 Enhancements you can add:

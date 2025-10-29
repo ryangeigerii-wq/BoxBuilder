@@ -107,6 +107,10 @@
                 Port Design Inputs</legend>
               <div
                 style="display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:.75rem;align-items:end;">
+                <label style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem;">
+                  <input type="checkbox" name="portEnabled" />
+                  <span class="lbl">Enable Port</span>
+                </label>
                 <label style="display:flex;flex-direction:column;gap:.3rem;">
                   <span class="lbl">Port Type</span>
                   <select name="portType">
@@ -126,6 +130,47 @@
                 <label style="display:flex;flex-direction:column;gap:.3rem;">
                   <span class="lbl"># Ports</span>
                   <input name="numPorts" type="number" min="1" step="1" value="1" />
+                </label>
+                <!-- Slot specific (inches) -->
+                <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Slot Width (in)</span>
+                  <input name="slotWidthIn" type="number" min="0" step="0.01" placeholder="e.g. 14" />
+                </label>
+                <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Slot Height (in)</span>
+                  <input name="slotHeightIn" type="number" min="0" step="0.01" placeholder="e.g. 2" />
+                </label>
+                <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Slot Side</span>
+                  <select name="slotSide">
+                    <option value="left" selected>Left</option>
+                    <option value="right">Right</option>
+                  </select>
+                </label>
+                <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Slot Inset Y (in)</span>
+                  <input name="slotInsetIn" type="number" step="0.01" value="0" />
+                </label>
+                <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Slot Gap (in)</span>
+                  <input name="slotGapIn" type="number" min="0" step="0.01" value="0.75" />
+                </label>
+                <!-- Round / Aero specific (inches) -->
+                <label class="port-round-aero" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Diameter (in)</span>
+                  <input name="roundDiameterIn" type="number" min="0" step="0.01" placeholder="e.g. 4" />
+                </label>
+                <label class="port-round-aero" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Spacing (in)</span>
+                  <input name="roundSpacingIn" type="number" min="0" step="0.01" value="2" />
+                </label>
+                <label class="port-round-aero" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Round Inset Y (in)</span>
+                  <input name="roundInsetIn" type="number" step="0.01" value="0" />
+                </label>
+                <label class="port-aero-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Flare Radius (in)</span>
+                  <input name="flareRadiusIn" type="number" min="0" step="0.01" value="0" />
                 </label>
                 <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
                   <span class="lbl">Slot Height (m)</span>

@@ -72,7 +72,7 @@
       , depthStyle: 'diagonal' // 'diagonal' | 'horizontal' | 'none'
       , showInternal: false
       , wallThickness: 0.75
-  , port: { enabled: false, type: 'slot', count: 1, targetHz: null, slotWidthIn: null, slotHeightIn: null, slotGapIn: null, slotSide: 'left', slotInsetIn: null, roundDiameterIn: null, roundSpacingIn: null, roundInsetIn: null } // extended designer state
+  , port: { enabled: false, type: 'slot', count: 1, targetHz: null, slotWidthIn: null, slotHeightIn: null, slotGapIn: null, slotSide: 'left', slotInsetIn: null, roundDiameterIn: null, roundSpacingIn: null, roundInsetIn: null, flareRadiusIn: null } // extended designer state
       , showPortOverlay: true
     };
 
@@ -165,6 +165,7 @@
       state.port.roundDiameterIn = readIn('roundDiameterIn');
       state.port.roundSpacingIn = readIn('roundSpacingIn');
       state.port.roundInsetIn = readIn('roundInsetIn');
+  state.port.flareRadiusIn = readIn('flareRadiusIn');
       state.port.targetHz = isFinite(targetHzVal) && targetHzVal > 0 ? targetHzVal : null;
       // Apply snapping to box dims if grid
       // no dimension snapping
@@ -289,8 +290,8 @@
           centerYIn = 0;
         }
         const L_in = est.physicalLengthPerPortM * 39.37;
-        const isAero = est.portType === 'aero';
-        const flareIn = 0; // placeholder until inch flare input exists
+  const isAero = est.portType === 'aero';
+  const flareIn = isAero && state.port.flareRadiusIn ? state.port.flareRadiusIn : 0;
         let g = `<g class='ports local-est'>`;
         for (let i = 0; i < count; i++) {
           const cxRel = leftMostCenterX + i * (dIn + spacingIn);
@@ -300,6 +301,7 @@
           const stroke = isAero ? '#ffb543' : '#58a6ff';
           g += `<circle cx='${pos.x.toFixed(2)}' cy='${pos.y.toFixed(2)}' r='${radPx.toFixed(2)}' fill='${fill}' stroke='${stroke}' stroke-width='1.2' vector-effect='non-scaling-stroke' />`;
           if (isAero && flareIn > 0) {
+            // Outer visual flare ring approximated; scale factor keeps subtle difference
             const flareRadPx = (rIn + flareIn * 0.35) * scale;
             g += `<circle cx='${pos.x.toFixed(2)}' cy='${pos.y.toFixed(2)}' r='${flareRadPx.toFixed(2)}' fill='none' stroke='${stroke}' stroke-dasharray='3 3' stroke-width='1' opacity='.6' vector-effect='non-scaling-stroke' />`;
           }
@@ -534,7 +536,15 @@
         const dM = dIn * 0.0254;
         areaPerPortM2 = Math.PI * Math.pow(dM / 2, 2);
         const rM = dM / 2;
-        endCorrectionPerEndM = 0.85 * rM; // simplified (no flare yet)
+        if (portType === 'aero') {
+          const flareIn = state.port.flareRadiusIn || 0;
+          const flareM = flareIn * 0.0254;
+          // Refined empirical reduction: base 0.85*r minus diminishing term proportional to flare radius capped at 60%
+          const reduction = Math.min(0.6, (flareM / rM) * 0.4) * rM;
+          endCorrectionPerEndM = (0.85 * rM) - reduction;
+        } else {
+          endCorrectionPerEndM = 0.85 * rM;
+        }
       } else { // slot
         const hIn = state.port.slotHeightIn;
         if (!(hIn > 0)) return null;
@@ -626,6 +636,10 @@
           if (state.port.enabled) {
             html += `<div><strong>Ports Enabled:</strong> ${state.port.count} × ${physIn.toFixed(2)} in (each)</div>`;
             html += `<div><strong>Total Port Disp (est):</strong> ${(areaIn2 * physIn * state.port.count).toFixed(1)} in³</div>`;
+            if (state.port.type === 'aero' && state.port.flareRadiusIn) {
+              const ecIn = state.localPortEst.endCorrectionPerEndM * 39.37;
+              html += `<div><strong>End Corr/End:</strong> ${ecIn.toFixed(2)} in (flare radius ${state.port.flareRadiusIn.toFixed(2)} in)</div>`;
+            }
           }
         }
         metrics.innerHTML = html;
@@ -869,7 +883,16 @@
         slotHeightM: getNum('slotHeightM'),
         slotGapM: getNum('slotGapM'),
         diameterM: getNum('diameterM'),
-        flareRadiusM: getNum('flareRadiusM') ?? 0,
+        flareRadiusM: (() => {
+          const mVal = getNum('flareRadiusM');
+          if (mVal !== null && mVal >= 0) return mVal;
+          const inchValEl = form.querySelector('[name="flareRadiusIn"]');
+          if (inchValEl) {
+            const inchVal = parseFloat(inchValEl.value);
+            if (isFinite(inchVal) && inchVal >= 0) return inchVal * 0.0254;
+          }
+          return 0;
+        })(),
         cornerPlacement: form.querySelector('input[name="cornerPlacement"]')?.checked || false,
         extraPhysicalLengthM: getNum('extraPhysicalLengthM') ?? 0,
         speedOfSound: getNum('speedOfSound') ?? 343,
