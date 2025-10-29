@@ -76,7 +76,14 @@ def build_html():
     if not TEMPLATE_SRC.exists():
         raise SystemExit("Template missing: app/templates/box_builder.html")
     content = TEMPLATE_SRC.read_text(encoding='utf-8')
-    # Adjust relative static paths if needed (we keep /static/ so Pages serves root/static/*)
+    # Determine repository name for base href (GitHub Pages served under /<repo>/)
+    repo_name = os.getenv('GITHUB_REPOSITORY', '').split('/')[-1] or 'BoxBuilder'
+    base_href = f"/{repo_name}/"
+    # Insert <base> tag right after opening <head>
+    if '<head>' in content and '<base' not in content:
+        content = content.replace('<head>', f'<head>\n  <base href="{base_href}">')
+    # Rewrite absolute /static/ references to relative (static/) so they resolve under base href
+    content = content.replace('href="/static/', 'href="static/').replace('src="/static/', 'src="static/')
     # Inject patch snippet before closing body
     if HTML_INSERT_MARKER in content:
         content = content.replace(HTML_INSERT_MARKER, JS_PATCH_SNIPPET + HTML_INSERT_MARKER)
@@ -84,6 +91,8 @@ def build_html():
     content = content.replace('<body', '<body data-offline="true"')
     out = DIST / 'index.html'
     out.write_text(INLINE_WARN + '\n' + content, encoding='utf-8')
+    # Add .nojekyll to prevent GitHub Pages from processing with Jekyll
+    (DIST / '.nojekyll').write_text('', encoding='utf-8')
 
 def main():
     clean_dist()
