@@ -16,3 +16,36 @@ yarn-debug.log*
 *.bak
 *.tmp
 *.old
+
+# Python specific ignores
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+*.egg
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+/.venv/
+venv/
+ENV/
+env/
+.env.local
+
+# FastAPI / Uvicorn logs
+uvicorn.log
+
+# Playwright / test artifacts
+playwright-report/
+test-results/
+*.trace.zip
+
+# VSCode local history
+.history/
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
