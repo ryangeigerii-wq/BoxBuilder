@@ -6,28 +6,28 @@
     const form = root.querySelector('form.box-lm-form');
     if (!form) return;
     // Static (GitHub Pages) fallback: detect pages host and disable server-dependent features.
-    (function(){
+    (function () {
       try {
         const isPagesHost = /\.github\.io$/i.test(location.hostname) || location.hostname === '127.0.0.1';
-        if(!isPagesHost) return;
+        if (!isPagesHost) return;
         // Disable server compute & restart buttons gracefully
         const computeBtnStatic = form.querySelector('button[name="computePort"]');
-        if(computeBtnStatic){
+        if (computeBtnStatic) {
           computeBtnStatic.disabled = true;
           computeBtnStatic.title = 'Disabled: static Pages build (no backend)';
           computeBtnStatic.textContent = 'Compute (offline)';
         }
         const restartBtnStatic = form.querySelector('button[name="serverReset"]');
-        if(restartBtnStatic){
+        if (restartBtnStatic) {
           restartBtnStatic.disabled = true;
           restartBtnStatic.title = 'Restart unavailable (static build)';
         }
         // Monkey patch fetch for /ports/design to return placeholder without error
         const originalFetch = window.fetch;
-        window.fetch = async function(url, opts){
+        window.fetch = async function (url, opts) {
           try {
             const u = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
-            if(u.startsWith('/ports/design')){
+            if (u.startsWith('/ports/design')) {
               return new Response(JSON.stringify({
                 offline: true,
                 message: 'Static Pages build: backend endpoint unavailable',
@@ -36,12 +36,12 @@
                 effectiveLengthPerPortM: 0,
                 tuningHzAchieved: 0,
                 endCorrectionPerEndM: 0
-              }), {status: 200, headers: {'Content-Type': 'application/json'}});
+              }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
-          } catch(err) { /* fall through */ }
+          } catch (err) { /* fall through */ }
           return originalFetch.apply(this, arguments);
         }
-      } catch(e) { /* ignore static patch errors */ }
+      } catch (e) { /* ignore static patch errors */ }
     })();
     // Hide spinner immediately (reduce perceived load time)
     const spinner = document.getElementById('builder-spinner');
@@ -72,7 +72,7 @@
       , depthStyle: 'diagonal' // 'diagonal' | 'horizontal' | 'none'
       , showInternal: false
       , wallThickness: 0.75
-      , port: { enabled: false, type: 'slot', count: 1 } // lightweight mirror of form inputs for preview helpers
+  , port: { enabled: false, type: 'slot', count: 1, targetHz: null, slotWidthIn: null, slotHeightIn: null, slotGapIn: null, slotSide: 'left', slotInsetIn: null, roundDiameterIn: null, roundSpacingIn: null, roundInsetIn: null } // extended designer state
       , showPortOverlay: true
     };
 
@@ -147,7 +147,25 @@
       const countVal = parseInt(numPortsEl?.value || '1', 10) || 1;
       state.port.type = typeVal;
       state.port.count = countVal;
-      state.port.enabled = isFinite(targetHzVal) && targetHzVal > 0 && state.showInternal; // require target + internal toggle
+      // New Port Designer enable toggle (still requires internal view for spatial context)
+      const portEnabledEl = form.querySelector('input[name="portEnabled"]');
+      state.port.enabled = portEnabledEl ? (portEnabledEl.checked && state.showInternal) : (isFinite(targetHzVal) && targetHzVal > 0 && state.showInternal);
+      // Designer inch-based fields
+      const readIn = name => {
+        const el = form.querySelector(`[name="${name}"]`);
+        if (!el) return null;
+        const v = parseFloat(el.value);
+        return isFinite(v) && v > 0 ? v : null;
+      };
+      state.port.slotWidthIn = readIn('slotWidthIn');
+      state.port.slotHeightIn = readIn('slotHeightIn');
+      state.port.slotGapIn = readIn('slotGapIn');
+      state.port.slotSide = (form.querySelector('[name="slotSide"]')?.value || 'left');
+      state.port.slotInsetIn = readIn('slotInsetIn');
+      state.port.roundDiameterIn = readIn('roundDiameterIn');
+      state.port.roundSpacingIn = readIn('roundSpacingIn');
+      state.port.roundInsetIn = readIn('roundInsetIn');
+      state.port.targetHz = isFinite(targetHzVal) && targetHzVal > 0 ? targetHzVal : null;
       // Apply snapping to box dims if grid
       // no dimension snapping
 
@@ -201,34 +219,54 @@
       if (state.portDesign) return ''; // server design takes precedence
       if (!state.localPortEst) return '';
       if (!state.showPortOverlay) return '';
+      if (!state.port.enabled) return '';
       const est = state.localPortEst;
       const t = state.wallThickness;
       if (est.portType === 'slot') {
-        const slotHeightM = parseFloat(form.querySelector('[name="slotHeightM"]')?.value || '0');
-        if (!isFinite(slotHeightM) || slotHeightM <= 0) return '';
-        const slotGapM = parseFloat(form.querySelector('[name="slotGapM"]')?.value || '0');
-        const internalWidthIn = Math.max(0, state.width - 2 * t);
-        const gapIn = slotGapM * 39.37;
-        const slotHeightIn = slotHeightM * 39.37;
         const numSlots = est.numPorts || 1;
-        const usableWidthIn = Math.max(0, internalWidthIn - (numSlots > 1 ? gapIn : 0));
-        const singleWidthIn = numSlots > 1 ? usableWidthIn / numSlots : usableWidthIn;
-        if (singleWidthIn <= 0) return '';
+        const internalWidthIn = Math.max(0, state.width - 2 * t);
+        const gapIn = (state.port.slotGapIn || 0);
+        let singleWidthIn = state.port.slotWidthIn;
+        if (!(singleWidthIn > 0)) {
+          const usableWidthIn = Math.max(0, internalWidthIn - (numSlots - 1) * gapIn);
+          singleWidthIn = numSlots > 0 ? (usableWidthIn / numSlots) : 0;
+        }
+        const slotHeightIn = state.port.slotHeightIn || 0;
+        if (!(slotHeightIn > 0) || !(singleWidthIn > 0)) return '';
         const L_in = est.physicalLengthPerPortM * 39.37;
         let g = `<g class='ports local-est'>`;
         for (let i = 0; i < numSlots; i++) {
-          // center slots horizontally; distribute by width + gap
-          const totalWidthWithGaps = numSlots * singleWidthIn + (numSlots - 1) * gapIn;
-          const leftStart = state.width / 2 - totalWidthWithGaps / 2;
-          const portXIn = leftStart + i * (singleWidthIn + gapIn);
-          const portYIn = state.height / 2 - slotHeightIn / 2;
-          const dispPos = toPx(portXIn + singleWidthIn / 2, portYIn + slotHeightIn / 2);
+          let portXCenter;
+          if (state.port.slotWidthIn) {
+            if (state.port.slotSide === 'right') {
+              const rightInner = state.width / 2 - t;
+              const leftOfPort = rightInner - singleWidthIn - (numSlots - 1 - i) * (singleWidthIn + gapIn);
+              portXCenter = leftOfPort + singleWidthIn / 2 - state.width / 2; // center-relative
+            } else {
+              const leftInner = -state.width / 2 + t;
+              const leftStart = leftInner + i * (singleWidthIn + gapIn);
+              portXCenter = leftStart + singleWidthIn / 2;
+            }
+          } else {
+            const totalWidthWithGaps = numSlots * singleWidthIn + (numSlots - 1) * gapIn;
+            const leftStart = -totalWidthWithGaps / 2;
+            portXCenter = leftStart + i * (singleWidthIn + gapIn) + singleWidthIn / 2;
+          }
+          const portXCenterRel = portXCenter;
+          let portYCenterIn;
+          if (state.port.slotInsetIn > 0) {
+            const topInner = -state.height / 2 + t;
+            portYCenterIn = topInner + state.port.slotInsetIn + slotHeightIn / 2;
+          } else {
+            portYCenterIn = 0;
+          }
+          const dispPos = toPx(portXCenterRel, portYCenterIn);
           const wPx = singleWidthIn * scale;
           const hPx = slotHeightIn * scale;
           g += `<rect x='${(dispPos.x - wPx / 2).toFixed(2)}' y='${(dispPos.y - hPx / 2).toFixed(2)}' width='${wPx.toFixed(2)}' height='${hPx.toFixed(2)}' fill='rgba(88,166,255,0.18)' stroke='#58a6ff' stroke-width='1.4' vector-effect='non-scaling-stroke' />`;
           if (i === 0) {
-            const lenStart = toPx(portXIn + singleWidthIn / 2, portYIn - 0.6);
-            const lenEnd = toPx(portXIn + singleWidthIn / 2 + L_in, portYIn - 0.6);
+            const lenStart = toPx(portXCenterRel, portYCenterIn - slotHeightIn / 2 - 0.6);
+            const lenEnd = toPx(portXCenterRel + L_in, portYCenterIn - slotHeightIn / 2 - 0.6);
             g += `<line x1='${lenStart.x.toFixed(2)}' y1='${lenStart.y.toFixed(2)}' x2='${lenEnd.x.toFixed(2)}' y2='${lenEnd.y.toFixed(2)}' stroke='#58a6ff' stroke-dasharray='5 3' stroke-width='1.2' vector-effect='non-scaling-stroke' />`;
             g += `<text x='${((lenStart.x + lenEnd.x) / 2).toFixed(2)}' y='${(lenStart.y - 7).toFixed(2)}' font-size='11' fill='#58a6ff' text-anchor='middle'>L≈${L_in.toFixed(2)}"</text>`;
           }
@@ -236,23 +274,27 @@
         g += `</g>`;
         return g;
       } else if (est.portType === 'round' || est.portType === 'aero') {
-        const dM = parseFloat(form.querySelector('[name="diameterM"]')?.value || '0');
-        if (!isFinite(dM) || dM <= 0) return '';
-        const dIn = dM * 39.37;
+        const dIn = state.port.roundDiameterIn || 0;
+        if (!(dIn > 0)) return '';
         const rIn = dIn / 2;
         const count = est.numPorts || 1;
-        const gapIn = rIn * 0.6;
-        const totalWidthIn = count * dIn + (count - 1) * gapIn;
-        const startCenterXIn = state.width / 2 - totalWidthIn / 2 + rIn;
-        const centerYIn = state.height * 0.65;
+        const spacingIn = state.port.roundSpacingIn || (rIn * 1.2);
+        const totalWidthIn = count * dIn + (count - 1) * spacingIn;
+        const leftMostCenterX = -totalWidthIn / 2 + rIn;
+        let centerYIn;
+        if (state.port.roundInsetIn > 0) {
+          const topInner = -state.height / 2 + t;
+          centerYIn = topInner + state.port.roundInsetIn + rIn;
+        } else {
+          centerYIn = 0;
+        }
         const L_in = est.physicalLengthPerPortM * 39.37;
         const isAero = est.portType === 'aero';
-        const flareM = isAero ? parseFloat(form.querySelector('[name="flareRadiusM"]')?.value || '0') : 0;
-        const flareIn = flareM * 39.37;
+        const flareIn = 0; // placeholder until inch flare input exists
         let g = `<g class='ports local-est'>`;
         for (let i = 0; i < count; i++) {
-          const cxIn = startCenterXIn + i * (dIn + gapIn);
-          const pos = toPx(cxIn, centerYIn);
+          const cxRel = leftMostCenterX + i * (dIn + spacingIn);
+          const pos = toPx(cxRel, centerYIn);
           const radPx = rIn * scale;
           const fill = isAero ? 'rgba(255,181,67,0.18)' : 'rgba(88,166,255,0.15)';
           const stroke = isAero ? '#ffb543' : '#58a6ff';
@@ -262,8 +304,8 @@
             g += `<circle cx='${pos.x.toFixed(2)}' cy='${pos.y.toFixed(2)}' r='${flareRadPx.toFixed(2)}' fill='none' stroke='${stroke}' stroke-dasharray='3 3' stroke-width='1' opacity='.6' vector-effect='non-scaling-stroke' />`;
           }
           if (i === 0) {
-            const lenStart = toPx(cxIn, centerYIn - rIn - 0.6);
-            const lenEnd = toPx(cxIn + L_in, centerYIn - rIn - 0.6);
+            const lenStart = toPx(cxRel, centerYIn - rIn - 0.6);
+            const lenEnd = toPx(cxRel + L_in, centerYIn - rIn - 0.6);
             g += `<line x1='${lenStart.x.toFixed(2)}' y1='${lenStart.y.toFixed(2)}' x2='${lenEnd.x.toFixed(2)}' y2='${lenEnd.y.toFixed(2)}' stroke='${stroke}' stroke-dasharray='5 3' stroke-width='1.2' vector-effect='non-scaling-stroke' />`;
             g += `<text x='${((lenStart.x + lenEnd.x) / 2).toFixed(2)}' y='${(lenStart.y - 7).toFixed(2)}' font-size='11' fill='${stroke}' text-anchor='middle'>L≈${L_in.toFixed(2)}"</text>`;
           }
@@ -471,20 +513,12 @@
 
     // Local port estimation helper (lightweight; uses current form inputs if internal shown)
     function recomputeLocalPort() {
-      const targetHzEl = form.querySelector('[name="targetHz"]');
-      const portTypeEl = form.querySelector('[name="portType"]');
-      const numPortsEl = form.querySelector('[name="numPorts"]');
-      const slotHeightEl = form.querySelector('[name="slotHeightM"]');
-      const slotGapEl = form.querySelector('[name="slotGapM"]');
-      const diameterEl = form.querySelector('[name="diameterM"]');
-      const flareEl = form.querySelector('[name="flareRadiusM"]');
-      const speedEl = form.querySelector('[name="speedOfSound"]');
-      const targetHz = parseFloat(targetHzEl?.value);
-      if (!isFinite(targetHz) || targetHz <= 0) return null;
-      const portType = portTypeEl?.value || 'slot';
-      const numPorts = parseInt(numPortsEl?.value || '1', 10) || 1;
-      const speed = parseFloat(speedEl?.value) || 343; // m/s
-      if (!state.showInternal) return null; // need internal dims enabled
+      const targetHz = state.port.targetHz;
+      if (!(targetHz > 0)) return null;
+      const portType = state.port.type || 'slot';
+      const numPorts = state.port.count || 1;
+      const speed = 343; // m/s
+      if (!state.showInternal || !state.port.enabled) return null;
       const t = state.wallThickness;
       const iW = Math.max(0, state.width - 2 * t);
       const iH = Math.max(0, state.height - 2 * t);
@@ -495,18 +529,25 @@
       let areaPerPortM2 = null;
       let endCorrectionPerEndM = 0;
       if (portType === 'round' || portType === 'aero') {
-        const dM = parseFloat(diameterEl?.value);
-        if (!isFinite(dM) || dM <= 0) return null;
+        const dIn = state.port.roundDiameterIn;
+        if (!(dIn > 0)) return null;
+        const dM = dIn * 0.0254;
         areaPerPortM2 = Math.PI * Math.pow(dM / 2, 2);
-        const flareR = (portType === 'aero') ? (parseFloat(flareEl?.value) || 0) : 0;
-        const r = dM / 2;
-        endCorrectionPerEndM = 0.85 * r - (flareR > 0 ? 0.4 * r * (flareR / r) : 0);
+        const rM = dM / 2;
+        endCorrectionPerEndM = 0.85 * rM; // simplified (no flare yet)
       } else { // slot
-        const hM = parseFloat(slotHeightEl?.value);
-        if (!isFinite(hM) || hM <= 0) return null;
-        const gapM = parseFloat(slotGapEl?.value) || 0;
-        const internalWidthM = Math.max(0, iW * 0.0254);
-        const wM = Math.max(0, internalWidthM - gapM);
+        const hIn = state.port.slotHeightIn;
+        if (!(hIn > 0)) return null;
+        const gapIn = state.port.slotGapIn || 0;
+        const internalWidthIn = Math.max(0, iW);
+        let wPerPortIn = state.port.slotWidthIn;
+        if (!(wPerPortIn > 0)) {
+          const usableWidthIn = Math.max(0, internalWidthIn - (numPorts - 1) * gapIn);
+          wPerPortIn = numPorts > 0 ? (usableWidthIn / numPorts) : 0;
+        }
+        if (!(wPerPortIn > 0)) return null;
+        const wM = wPerPortIn * 0.0254;
+        const hM = hIn * 0.0254;
         areaPerPortM2 = wM * hM;
         const Rh = (wM * hM) / (2 * (wM + hM));
         endCorrectionPerEndM = Math.max(0, (1.7 * Math.sqrt(wM * hM / Math.PI) * 0.6 + 0.5 * Rh));
