@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Box Builder Home</title>
+    <link rel="stylesheet" href="/static/css/style.css?v={{ cache_bust }}" />
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="logo-block">
+            <img src="/static/img/logo.png?v={{ cache_bust }}" alt="BoxBuilder Logo" class="logo" />
+            <h1>Box Builder</h1>
+            <p class="tagline">Design precise subwoofer enclosures.</p>
+        </div>
+        <nav class="primary-nav">
+            <a href="/docs">API Docs</a>
+            <a href="/health">Health</a>
+            <a href="/boxes/create-box">Default Box JSON</a>
+            <a href="/subwoofers/crutchfield?pages=1">Crutchfield Subs</a>
+        </nav>
+    </header>
+
+    <main class="content">
+        <section class="actions">
+            <a href="/box-builder" class="button primary">Build Box</a>
+            <a href="#folders" class="button secondary">Jump to Workspace</a>
+        </section>
+
+        <section id="folders" class="workspace">
+            <h2>Workspace</h2>
+            <p class="section-desc">Organize future tools, presets, saved boxes, materials and calculators here.</p>
+            <div class="folder-grid">
+                <div class="folder">
+                    <h3>Presets</h3>
+                    <p>Common box sizes and recommended volumes.</p>
+                    <a href="/boxes/create-box" class="mini-link">View default box</a>
+                </div>
+                <div class="folder">
+                    <h3>Subwoofer Data</h3>
+                    <p>Scraped specs from Crutchfield and other sources.</p>
+                    <a href="/subwoofers/crutchfield?pages=1" class="mini-link">Fetch subs</a>
+                </div>
+                <div class="folder">
+                    <h3>Saved Designs</h3>
+                    <p>Coming soon: save and revisit custom enclosures.</p>
+                </div>
+                <div class="folder">
+                    <h3>Materials</h3>
+                    <p>Panel thickness, bracing, damping calculators.</p>
+                </div>
+                <div class="folder">
+                    <h3>Export</h3>
+                    <p>Generate cut sheets and build PDFs.</p>
+                </div>
+                <div class="folder placeholder">
+                    <h3>More</h3>
+                    <p>Room for future features.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; {{ year }} Box Builder</p>
+    </footer>
+    <!-- Vanilla builder uses only box_builder.js on the builder page; no global framework needed -->
+    <script>
+        const origin = { x, y };
+        const scale = scale; // existing scale variable
+        const { x: dispX, y: dispY } = toPx(hx - state.width / 2, hy - state.height / 2, scale, { x: x + dispW / 2, y: y + dispH / 2 });
+    </script>
+</body>
+
+</html>

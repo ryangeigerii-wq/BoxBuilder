@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="64" height="64" role="img" aria-label="Loading">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff7a1f"/>
+      <stop offset="100%" stop-color="#ffb347"/>
+    </linearGradient>
+  </defs>
+  <circle cx="25" cy="25" r="22" stroke="#1c2229" stroke-width="4" fill="none" opacity="0.25"/>
+  <path d="M25 3 a22 22 0 0 1 0 44 a22 22 0 0 1 0 -44" stroke="url(#g)" stroke-width="4" stroke-linecap="round" fill="none">
+    <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.9s" repeatCount="indefinite" />
+  </path>
+</svg>

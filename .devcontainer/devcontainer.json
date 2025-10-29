@@ -1,0 +1,25 @@
+{
+    "name": "boxbuilder",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11",
+    "postCreateCommand": "pip install -r requirements.txt && pip install pre-commit ruff mypy black pytest-playwright && python -m playwright install chromium",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python"
+            },
+            "extensions": [
+                "github.copilot",
+                "github.copilot-chat",
+                "ms-python.python",
+                "charliermarsh.ruff",
+                "ms-playwright.playwright"
+            ]
+        }
+    },
+    "forwardPorts": [
+        8000
+    ]
+}

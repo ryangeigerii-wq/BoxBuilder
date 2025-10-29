@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Subwoofer Box Builder (Simple)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/static/css/style.css?v={{ cache_bust }}" />
+  <script src="https://cdn.jsdelivr.net/npm/lemonadejs/dist/lemonade.min.js" defer></script>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; padding: 1.25rem; line-height: 1.35; }
+    h1 { margin: .2rem 0 1rem; font-size: 1.35rem; }
+    .layout { display:flex; flex-wrap:wrap; gap:2rem; align-items:flex-start; }
+    .panel { flex:1 1 320px; max-width:520px; background:#182129; padding:1rem 1.2rem; border:1px solid #27343f; border-radius:6px; color:#d9e1e6; }
+    .panel h2 { margin:0 0 .75rem; font-size:1.05rem; }
+    .grid { display:grid; grid-template-columns: 160px 1fr; gap:6px 14px; }
+    .row { display: contents; }
+    label { font-size: .85rem; color:#dde5ea; }
+    input[type=number], select { width:120px; padding:.35rem .45rem; border:1px solid #3a4b57; border-radius:4px; background:#1f2b33; color:#e2edf3; font-size:.85rem; }
+    input[type=checkbox] { transform:scale(1.05); }
+    .hint { color:#7f96a7; font-size:11px; grid-column: 2 / span 1; margin-top:-2px; }
+    svg { border:1px solid #394a57; background:#f9f9f9; margin-top:12px; box-shadow:0 2px 4px rgba(0,0,0,.35); }
+    .readout { font-size:.8rem; margin-top:.5rem; color:#cad4db; }
+    .pill { display:inline-block; font-size:11px; padding:2px 8px; border:1px solid #445869; border-radius:999px; color:#d0dde4; background:#23313a; }
+    .footer-note { font-size:11px; opacity:.65; margin-top:1rem; }
+    .actions { margin-top:1rem; }
+    button.download { background:#2e3f4b; color:#e6f1f7; border:1px solid #425665; padding:.55rem .9rem; font-size:.75rem; border-radius:5px; cursor:pointer; }
+    button.download:hover { background:#3b4e5b; }
+  </style>
+</head>
+<body>
+  <a href="/" style="text-decoration:none;font-size:.8rem;">← Home</a>
+  <h1>Subwoofer Box Builder (Simple)</h1>
+  <p style="max-width:620px;font-size:.8rem;opacity:.8;">Lightweight rectangle view using a nominal cutout rule (0.93× sub size). Use override to specify an exact manufacturer cutout. This template is standalone and does not affect the advanced isometric builder.</p>
+
+  <div id="app"></div>
+
+  <script defer>
+    function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+    function num(v,d=0){ v=+v; return Number.isFinite(v)?v:d; }
+    const round2 = n => Math.round(n*100)/100;
+
+    function App(){
+      const self = this;
+      // Initial state
+      self.width = 28; self.height = 16; self.depth = 14; // depth retained for volume though 2D view
+      self.ghostOffset = 10; // offset for ghost rectangle
+      self.subNominal = 12;  // 8,10,12,15,18 etc
+      self.cutoutOverride = ''; self.useOverride = false;
+
+      self.cutout = function(){
+        if(self.useOverride){ return clamp(num(self.cutoutOverride,0),0,Math.max(self.width,self.height)); }
+        return round2(num(self.subNominal,12)*0.93);
+      };
+
+      const CW=640, CH=420;
+      const PAD=20;
+
+      self.redraw = function(){
+        self.width = clamp(num(self.width,28),1,CW-2*PAD-self.ghostOffset);
+        self.height= clamp(num(self.height,16),1,CH-2*PAD-self.ghostOffset);
+        self.depth = clamp(num(self.depth,14),0,96);
+
+        const front = document.getElementById('front');
+        const ghost = document.getElementById('ghost');
+        const hole  = document.getElementById('cutout');
+
+        const x = Math.round((CW - self.width - self.ghostOffset)/2);
+        const y = Math.round((CH - self.height - self.ghostOffset)/2);
+
+        front.setAttribute('x',x); front.setAttribute('y',y); front.setAttribute('width',self.width); front.setAttribute('height',self.height);
+        ghost.setAttribute('x',x+self.ghostOffset); ghost.setAttribute('y',y+self.ghostOffset); ghost.setAttribute('width',self.width); ghost.setAttribute('height',self.height);
+
+        const cut = clamp(self.cutout(),0,Math.min(self.width,self.height));
+        const cx = x + self.width/2; const cy = y + self.height/2;
+        hole.setAttribute('cx',cx); hole.setAttribute('cy',cy); hole.setAttribute('r',cut/2);
+
+        document.getElementById('readout').textContent = `Cutout Ø: ${round2(cut)} in  ·  Rule: ${self.useOverride ? 'Override' : '0.93× nominal'}`;
+        document.getElementById('vol').textContent = `${round2(self.width*self.height*self.depth/1728)} ft³ gross`;
+      };
+
+      setTimeout(self.redraw,0);
+
+      self.download = function(){
+        self.redraw();
+        const svg = document.getElementById('simple-svg');
+        const blob = new Blob([svg.outerHTML], {type:'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `simple_box_${self.subNominal}in.svg`;
+        document.body.appendChild(a); a.click();
+        requestAnimationFrame(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);});
+      };
+
+      return `
+        <div class="layout">
+          <div class="panel">
+            <h2>Dimensions</h2>
+            <div class="grid">
+              <div class="row"><label>Width (in)</label><input type="number" value="{{width}}" step="0.25" oninput="self.redraw()"></div>
+              <div class="row"><label>Height (in)</label><input type="number" value="{{height}}" step="0.25" oninput="self.redraw()"></div>
+              <div class="row"><label>Depth (in)</label><input type="number" value="{{depth}}" step="0.25" oninput="self.redraw()"></div>
+
+              <div class="row"><label>Nominal sub size</label>
+                <select value="{{subNominal}}" onchange="self.redraw()">
+                  <option>8</option><option>10</option><option selected>12</option><option>15</option><option>18</option>
+                </select>
+              </div>
+              <div class="row"><label>Use cutout override</label><input type="checkbox" checked="{{useOverride}}" onchange="self.redraw()"></div>
+              <div class="row"><label>Cutout override Ø (in)</label><input type="number" value="{{cutoutOverride}}" step="0.1" oninput="self.redraw()"><div class="hint">Blank or toggle off → auto rule (0.93×)</div></div>
+              <div class="row"><label>Ghost offset</label><input type="number" value="{{ghostOffset}}" step="1" min="0" max="120" oninput="self.redraw()"><div class="hint">Purely visual spacing</div></div>
+              <div class="row"><label>Gross volume</label><span id="vol" class="pill">--</span></div>
+            </div>
+            <div class="readout" id="readout">Cutout Ø: -- in · Rule: 0.93× nominal</div>
+            <div class="actions"><button class="download" onclick="self.download()">Download SVG</button></div>
+            <p class="footer-note">Cutout rule: diameter = 0.93 × nominal sub size unless override provided.</p>
+          </div>
+          <div class="panel">
+            <h2>Preview</h2>
+            <svg id="simple-svg" width="640" height="420" viewBox="0 0 640 420" role="img" aria-label="Front and ghost box faces">
+              <defs>
+                <pattern id="ghostHatchSimple" width="6" height="6" patternUnits="userSpaceOnUse">
+                  <path d="M0 6 L6 0 M-1 1 L1 -1 M5 7 L7 5" stroke="#55687a" stroke-width="0.6" opacity="0.55"/>
+                </pattern>
+              </defs>
+              <rect id="front" x="0" y="0" width="0" height="0" fill="#ff9d4f" stroke="#333" stroke-width="1.2" />
+              <rect id="ghost" x="0" y="0" width="0" height="0" fill="url(#ghostHatchSimple)" stroke="#55687a" stroke-width="1" opacity="0.35" />
+              <circle id="cutout" cx="0" cy="0" r="0" fill="#1e2630" stroke="#111" stroke-width="0.8" />
+            </svg>
+          </div>
+        </div>
+      `;
+    }
+
+    lemonade.render(App, document.getElementById('app'));
+  </script>
+</body>
+</html>

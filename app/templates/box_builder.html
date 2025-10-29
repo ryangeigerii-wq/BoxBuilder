@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Box Builder</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/static/css/style.css?v={{ cache_bust }}" />
+  <style>
+    /* Inline enhancement: active zoom button styling */
+    .zoom-bar button.is-active {
+      outline: 2px solid #ffd28c;
+      box-shadow: 0 0 0 3px rgba(255, 210, 140, 0.35);
+      filter: brightness(1.15);
+      position: relative;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Loading spinner overlay (removed shortly after JS init) -->
+  <div id="builder-spinner" class="builder-spinner" aria-hidden="true">
+    <div class="spinner-inner">
+      <img src="/static/img/spinner/default.svg?v={{ cache_bust }}" alt="Loading" />
+      <p class="spinner-text">Initializing builder…</p>
+    </div>
+  </div>
+  <header class="site-header builder-header" style="padding:1.4rem 2rem 0.5rem;">
+    <a href="/" class="back-link">← Home</a>
+    <div class="logo-block builder-compact" style="margin-bottom:.5rem;">
+      <img src="/static/img/logo.png?v={{ cache_bust }}" alt="Logo" class="logo" />
+      <h1 style="margin:.5rem 0 0;">Box Builder</h1>
+      <p class="tagline" style="margin-top:.25rem;">Interactive dimensions, volume, cutout & SVG preview.</p>
+    </div>
+  </header>
+  <main class="builder-layout" id="lm-root">
+    <!-- JS builder form -->
+    <div class="panel">
+      <h2>Dimensions (inches)</h2>
+      <form class="box-lm-form" onsubmit="return false;">
+        <div class="triple">
+          <label><span class="lbl">Width (W)</span><input name="width" type="number" value="18" step="0.1" min="1"
+              max="100" /></label>
+          <label><span class="lbl">Height (H)</span><input name="height" type="number" value="12" step="0.1" min="1"
+              max="100" /></label>
+          <label><span class="lbl">Depth (D)</span><input name="depth" type="number" value="10" step="0.1" min="0"
+              max="100" /></label>
+        </div>
+        <div class="triple">
+          <label><span class="lbl">Driver Disp (in³)</span><input name="driverDisp" type="number" value="0" step="0.1"
+              min="0" max="10000" /></label>
+          <label><span class="lbl">Bracing Disp (in³)</span><input name="bracingDisp" type="number" value="0" step="0.1"
+              min="0" max="10000" /></label>
+          <div class="metrics" style="display:flex;flex-direction:column;gap:.25rem;">
+            <div style="opacity:.7;">Volumes update live…</div>
+          </div>
+        </div>
+        <div class="triple">
+          <label style="display:flex;align-items:center;gap:0.5rem;">
+            <input type="checkbox" name="showGhost" />
+            <span class="lbl">Show ghost panels</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;">
+            <input type="checkbox" name="showDims" checked />
+            <span class="lbl">Show dimensions</span>
+          </label>
+        </div>
+        <div class="triple" style="align-items:start;">
+          <label class="triple-field">
+            <span class="lbl">Cut Diameter (in)</span>
+            <input name="cutDiameter" type="number" value="" step="0.01" min="0" placeholder="auto" />
+          </label>
+          <label class="triple-field">
+            <span class="lbl">Subwoofer Size</span>
+            <select name="subSize">
+              <option value="8">8"</option>
+              <option value="10">10"</option>
+              <option value="12" selected>12"</option>
+              <option value="15">15"</option>
+            </select>
+          </label>
+          <label class="triple-field">
+            <span class="lbl">Sub Count</span>
+            <select name="subConfig">
+              <option value="single" selected>Single</option>
+              <option value="dual">Dual</option>
+            </select>
+          </label>
+        </div>
+        <div class="triple">
+          <label style="display:flex;flex-direction:column;gap:0.25rem;">
+            <span class="lbl">Wall Thickness (in)</span>
+            <input name="wallThickness" type="number" step="0.01" min="0" value="0.75" />
+            <small style="opacity:.65;">Used for internal volume & tuning.</small>
+          </label>
+        </div>
+        <!-- Collapsible Menus Row -->
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;position:relative;">
+          <div class="port-menu-wrapper" style="position:relative;">
+            <button type="button" class="action" name="togglePortMenu"
+              style="background:#2d5b7d;color:#fff;display:flex;align-items:center;gap:.4rem;padding:.4rem .75rem;font-size:.8rem;">
+              <span class="port-menu-label">Port Design ▾</span>
+            </button>
+            <fieldset class="port-inputs"
+              style="margin:0;padding:.75rem 1rem;border:1px solid #394654;border-radius:6px;background:#1b232b;color:#dde3e9;position:absolute;z-index:50;top:110%;left:0;min-width:min(42rem,85vw);box-shadow:0 6px 18px rgba(0,0,0,0.35);display:none;">
+              <legend style="font-size:.85rem;padding:0 .5rem;letter-spacing:.5px;text-transform:uppercase;opacity:.8;">
+                Port Design Inputs</legend>
+              <div
+                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:.75rem;align-items:end;">
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Port Type</span>
+                  <select name="portType">
+                    <option value="slot" selected>Slot</option>
+                    <option value="round">Round</option>
+                    <option value="aero">Aero (Flared)</option>
+                  </select>
+                </label>
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Net Volume (L)</span>
+                  <input name="boxVolumeLiters" type="number" min="0" step="0.1" placeholder="e.g. 65" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Target Tuning (Hz)</span>
+                  <input name="targetHz" type="number" min="1" step="0.1" placeholder="e.g. 32" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl"># Ports</span>
+                  <input name="numPorts" type="number" min="1" step="1" value="1" />
+                </label>
+                <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Slot Height (m)</span>
+                  <input name="slotHeightM" type="number" min="0" step="0.001" placeholder="e.g. 0.050" />
+                </label>
+                <label class="port-slot-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Slot Gap (m)</span>
+                  <input name="slotGapM" type="number" min="0" step="0.001" value="0.010" />
+                </label>
+                <label class="port-round-aero" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Diameter (m)</span>
+                  <input name="diameterM" type="number" min="0" step="0.001" placeholder="e.g. 0.100" />
+                </label>
+                <label class="port-aero-only" style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Flare Radius (m)</span>
+                  <input name="flareRadiusM" type="number" min="0" step="0.001" value="0" />
+                </label>
+                <label style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem;">
+                  <input type="checkbox" name="cornerPlacement" />
+                  <span class="lbl">Corner Mouth Placement</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem;">
+                  <input type="checkbox" name="showPortOverlay" checked />
+                  <span class="lbl">Show Port Overlay</span>
+                </label>
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Extra Physical Len (m)</span>
+                  <input name="extraPhysicalLengthM" type="number" min="0" step="0.001" value="0" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Speed of Sound (m/s)</span>
+                  <input name="speedOfSound" type="number" min="1" step="1" value="343" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Driver Sd (m²)</span>
+                  <input name="driverSdM2" type="number" min="0" step="0.0001" placeholder="optional" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:.3rem;">
+                  <span class="lbl">Peak Excursion (m)</span>
+                  <input name="peakConeExcursionM" type="number" min="0" step="0.0001" placeholder="optional" />
+                </label>
+              </div>
+              <div style="margin-top:.75rem;display:flex;gap:.75rem;flex-wrap:wrap;">
+                <button type="button" name="computePort" class="action" style="background:#2d5b7d;color:#fff;">Compute
+                  Port Design</button>
+                <small style="opacity:.65;">Only enter fields relevant to selected port type; others ignored. Volume is
+                  net internal after all displacements.</small>
+              </div>
+            </fieldset>
+          </div>
+          <div class="cutout-menu-wrapper" style="position:relative;">
+            <button type="button" class="action" name="toggleCutoutMenu"
+              style="background:#5d4f2d;color:#fff;display:flex;align-items:center;gap:.4rem;padding:.4rem .75rem;font-size:.8rem;">
+              <span class="cutout-menu-label">Cutout Settings ▾</span>
+            </button>
+            <fieldset class="cutout-inputs"
+              style="margin:0;padding:.75rem 1rem;border:1px solid #5d4f2d;border-radius:6px;background:#302719;color:#f1e3d0;position:absolute;z-index:50;top:110%;left:0;min-width:16rem;box-shadow:0 6px 18px rgba(0,0,0,0.35);display:none;">
+              <legend style="font-size:.8rem;padding:0 .4rem;letter-spacing:.5px;text-transform:uppercase;opacity:.85;">
+                Cutout Settings</legend>
+              <div style="display:flex;flex-direction:column;gap:.5rem;">
+                <label style="display:flex;flex-direction:column;gap:.25rem;">
+                  <span class="lbl">Cut Diameter (in)</span>
+                  <input name="cutDiameter" type="number" step="0.01" min="0" placeholder="auto" />
+                </label>
+                <small style="opacity:.65;line-height:1.2;">Leave blank to use 0.93× nominal size.<br />Change sub size
+                  or enter exact spec.</small>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+        <div class="triple">
+          <label style="display:flex;flex-direction:column;gap:0.25rem;min-width:10rem;">
+            <span class="lbl">Finish</span>
+            <select name="finish">
+              <option value="flat" selected>Flat</option>
+              <option value="wood1">Wood Texture 1</option>
+              <option value="wood2">Wood Texture 2</option>
+              <option value="wood3">Wood Texture 3</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:0.25rem;min-width:10rem;">
+            <span class="lbl">Depth Guide Style</span>
+            <select name="depthStyle">
+              <option value="diagonal" selected>Diagonal</option>
+              <option value="horizontal">Horizontal</option>
+              <option value="none">Hidden</option>
+            </select>
+            <small style="opacity:.65;">Visual representation of depth.</small>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;">
+            <input type="checkbox" name="showInternal" />
+            <span class="lbl">Show internal measurements</span>
+          </label>
+        </div>
+        <div class="buttons-row" style="display:flex;flex-wrap:wrap;gap:.75rem;">
+          <button type="button" class="action primary">Download SVG (coming soon)</button>
+          <button type="button" name="stateReset" class="action" style="background:#444;color:#fff;">Reset
+            State</button>
+          <button type="button" name="serverReset" class="action" style="background:#b34747;color:#fff;">Restart
+            Server</button>
+        </div>
+        <p class="footer-note" style="opacity:.7;">All interactions client-side. Hole diameters default to 0.93× nominal
+          unless override enabled.</p>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="zoom-bar"
+        style="margin:0 auto .75rem auto;display:flex;align-items:center;justify-content:center;gap:.75rem;max-width:fit-content;">
+        <span style="font-size:.85rem;opacity:.8;" aria-label="Zoom" title="Zoom">🔍</span>
+        <button type="button" name="zoomClose" class="action"
+          style="background:#2e3950;color:#fff;padding:.25rem .6rem;">Close</button>
+        <button type="button" name="zoomNormal" class="action"
+          style="background:#3f5068;color:#fff;padding:.25rem .6rem;">Normal</button>
+        <button type="button" name="zoomWide" class="action"
+          style="background:#546b88;color:#fff;padding:.25rem .6rem;">Wide</button>
+      </div>
+      <h2 style="text-align:center;">Preview</h2>
+      <div class="preview-wrapper">
+        <div style="opacity:.6;padding:1rem;text-align:center;">Enable JavaScript for live preview.</div>
+      </div>
+    </div>
+  </main>
+  <!-- Static fallback / SEO & enables tests to assert presence without JS execution -->
+  <noscript>
+    <div class="panel" style="margin:1rem;">
+      <h2>Box Builder (Static Fallback)</h2>
+      <p>Enable JavaScript to use the interactive box builder with live preview.</p>
+    </div>
+  </noscript>
+  <!-- Vanilla builder script -->
+  <script src="/static/js/box_builder.js?v={{ cache_bust }}" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Box Builder Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    .builder-spinner { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; color: white; z-index: 9999; }
+    .builder-spinner.is-hide { opacity: 0; transition: opacity 0.1s; }
+    #lm-root { background: white; padding: 20px; border-radius: 8px; }
+    .panel { margin-bottom: 20px; }
+    .preview-wrapper { border: 1px solid #ccc; min-height: 400px; }
+    input[type="number"], select { padding: 5px; margin: 5px; }
+    button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+    .metrics { padding: 10px; background: #f9f9f9; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div id="builder-spinner" class="builder-spinner">
+    <div>Loading builder...</div>
+  </div>
+  
+  <div id="lm-root">
+    <div class="panel">
+      <h2>Dimensions</h2>
+      <form class="box-lm-form" onsubmit="return false;">
+        <div>
+          <label>Width: <input name="width" type="number" value="18" step="0.1" min="1" max="100" /></label>
+          <label>Height: <input name="height" type="number" value="12" step="0.1" min="1" max="100" /></label>
+          <label>Depth: <input name="depth" type="number" value="10" step="0.1" min="0" max="100" /></label>
+        </div>
+        <div>
+          <label><input type="checkbox" name="showGhost" /> Show ghost panels</label>
+          <label><input type="checkbox" name="showDims" checked /> Show dimensions</label>
+          <label>Cut Diameter: <input name="cutDiameter" type="number" step="0.01" placeholder="auto" /></label>
+        </div>
+        <div>
+          <label>Subwoofer Size:
+            <select name="subSize">
+              <option value="8">8"</option>
+              <option value="10">10"</option>
+              <option value="12" selected>12"</option>
+              <option value="15">15"</option>
+            </select>
+          </label>
+          <label>Sub Layout:
+            <select name="subConfig">
+              <option value="single" selected>Single</option>
+              <option value="dual">Dual</option>
+            </select>
+          </label>
+          <label>Depth Style:
+            <select name="depthStyle">
+              <option value="diagonal" selected>Diagonal</option>
+              <option value="horizontal">Horizontal</option>
+              <option value="none">Hidden</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label><input type="checkbox" name="showInternal" /> Show internal measurements</label>
+          <label>Wall Thickness: <input name="wallThickness" type="number" step="0.01" value="0.75" /></label>
+        </div>
+        <div>
+          <button type="button" name="zoomClose">Close</button>
+          <button type="button" name="zoomNormal">Normal</button>
+          <button type="button" name="zoomWide">Wide</button>
+          <button type="button" name="stateReset">Reset State</button>
+          <button type="button" name="serverReset">Restart Server</button>
+        </div>
+        <div class="metrics">
+          <div><strong>Width:</strong> -- in</div>
+          <div><strong>Height:</strong> -- in</div>
+          <div><strong>Depth:</strong> -- in</div>
+          <div><strong>Gross Vol:</strong> -- in³</div>
+        </div>
+      </form>
+    </div>
+    
+    <div class="panel">
+      <h2>Preview</h2>
+      <div class="preview-wrapper">
+        <div style="padding: 20px; text-align: center; color: #999;">Preview will appear here...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app/static/js/box_builder.js"></script>
+  
+  <script>
+    // Debug helper
+    console.log('Test page loaded, waiting for DOMContentLoaded...');
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM ready');
+      console.log('Root element:', document.getElementById('lm-root'));
+      console.log('Form element:', document.querySelector('form.box-lm-form'));
+    });
+  </script>
+</body>
+</html>
