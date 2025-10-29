@@ -5,6 +5,44 @@
     if (!root) return;
     const form = root.querySelector('form.box-lm-form');
     if (!form) return;
+    // Static (GitHub Pages) fallback: detect pages host and disable server-dependent features.
+    (function(){
+      try {
+        const isPagesHost = /\.github\.io$/i.test(location.hostname) || location.hostname === '127.0.0.1';
+        if(!isPagesHost) return;
+        // Disable server compute & restart buttons gracefully
+        const computeBtnStatic = form.querySelector('button[name="computePort"]');
+        if(computeBtnStatic){
+          computeBtnStatic.disabled = true;
+          computeBtnStatic.title = 'Disabled: static Pages build (no backend)';
+          computeBtnStatic.textContent = 'Compute (offline)';
+        }
+        const restartBtnStatic = form.querySelector('button[name="serverReset"]');
+        if(restartBtnStatic){
+          restartBtnStatic.disabled = true;
+          restartBtnStatic.title = 'Restart unavailable (static build)';
+        }
+        // Monkey patch fetch for /ports/design to return placeholder without error
+        const originalFetch = window.fetch;
+        window.fetch = async function(url, opts){
+          try {
+            const u = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
+            if(u.startsWith('/ports/design')){
+              return new Response(JSON.stringify({
+                offline: true,
+                message: 'Static Pages build: backend endpoint unavailable',
+                areaPerPortM2: 0,
+                physicalLengthPerPortM: 0,
+                effectiveLengthPerPortM: 0,
+                tuningHzAchieved: 0,
+                endCorrectionPerEndM: 0
+              }), {status: 200, headers: {'Content-Type': 'application/json'}});
+            }
+          } catch(err) { /* fall through */ }
+          return originalFetch.apply(this, arguments);
+        }
+      } catch(e) { /* ignore static patch errors */ }
+    })();
     // Hide spinner immediately (reduce perceived load time)
     const spinner = document.getElementById('builder-spinner');
     if (spinner) {

@@ -38,6 +38,66 @@ uvicorn main:app --reload
 ```
 Open http://127.0.0.1:8000/docs for interactive API docs.
 
+## GitHub Actions & Pages Deployment
+
+This repository includes two workflows located in `.github/workflows`:
+
+1. `ci.yml` — Runs on push and PR to `main`. Sets up Python 3.11, installs dependencies, and executes `pytest -q` for the full test suite.
+2. `pages.yml` — Builds a static snapshot of the box builder and deploys it to GitHub Pages. Triggered on push to `main` or manually via workflow dispatch.
+
+### Static Build Details
+The static build script `scripts/build_pages.py` produces a `dist/` folder containing:
+- `index.html` (derived from `app/templates/box_builder.html` with an injected offline banner and JS patch)
+- `static/` assets (CSS/JS/images) copied from `app/static`
+
+Because GitHub Pages does not run the FastAPI backend, server-only features are disabled:
+- Port compute button request to `/ports/design` returns a placeholder JSON response (via a fetch monkey patch).
+- Admin restart button is disabled.
+- Local heuristic port overlay continues to function (pure client-side logic).
+
+When viewing the Pages site (e.g. `https://<username>.github.io/BoxBuilder/`):
+- A detection script in `box_builder.js` disables server actions.
+- The UI label for the compute button changes to `Compute (offline)`.
+
+### Manually Running the Static Build Locally
+```powershell
+python -m venv .venv
+./.venv/Scripts/Activate.ps1
+pip install -r requirements.txt
+python scripts/build_pages.py
+```
+Then open `dist/index.html` in a browser. (Note: relative `/static/...` paths expect the site to be served from the repository root. For file:// viewing, some browsers may block font/image loads; use a lightweight HTTP server if needed.)
+
+### Verifying Pages Deployment
+After a push to `main`:
+1. Navigate to the Actions tab; confirm `CI` succeeded.
+2. Open the `Deploy Pages` workflow run; ensure both `build` and `deploy` jobs are green.
+3. Visit the environment URL shown under the `github-pages` deployment.
+4. Confirm the following in the Pages site:
+  - Spinner fades and disappears.
+  - Port compute button is disabled and shows offline text.
+  - Local port overlays appear when internal view + tuning inputs are provided.
+  - No network errors for `/ports/design` (requests are intercepted client-side).
+
+### Common Pages Issues
+| Symptom | Cause | Mitigation |
+|---------|-------|-----------|
+| 404 for /static assets | Paths changed or not copied | Ensure `scripts/build_pages.py` ran and `dist/static` exists |
+| Compute button still enabled | JS patch not injected | Re-run build; verify `index.html` contains the injected `<script>` snippet |
+| Broken images | Case-sensitive path mismatch | Verify filenames in `app/static/img` and references match exactly |
+| Styles not applied | CSS not copied or cached | Clear browser cache or add a query parameter (cache bust) manually |
+
+### Extending Static Export
+Enhancements you can add:
+- Add a lightweight service worker to cache static assets for offline usage.
+- Generate a `manifest.json` for PWA install support.
+- Export additional HTML variants (e.g. simplified builder without port section) by extending `build_pages.py`.
+
+### Security Notes
+The static export removes active backend calls; no user data is collected. Any future analytics should be explicitly opt-in and separate from core builder logic.
+
+---
+
 ## Tests
 ```powershell
 pytest -q
