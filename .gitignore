@@ -49,3 +49,15 @@ test-results/
 .coverage
 coverage.xml
 htmlcov/
+
+# Scraper artifacts / local debug outputs
+subwoofers_db.json
+subwoofers/*/latest.json
+sundown_enriched_mock*.json
+debug_sundown_sample.html
+*.trace.json
+
+# Local editor / OS specifics (Windows)
+Thumbs.db
+Desktop.ini
+*.ps1.tmp

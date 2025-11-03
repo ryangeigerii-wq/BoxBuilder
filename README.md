@@ -7,6 +7,7 @@ Minimal FastAPI backend skeleton.
 - Modular routers (`app/api/routes`) for health and box creation
 - Separation of concerns: models vs schemas
 - Basic test using `TestClient`
+- Manufacturer scraping endpoints (Sundown & JL Audio 8" subs) with synthetic fallback and enrichment mock test.
 
 ## Project Layout
 ```
@@ -37,6 +38,27 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 Open http://127.0.0.1:8000/docs for interactive API docs.
+
+### Scraping Quick Start
+```powershell
+curl http://127.0.0.1:8000/subwoofers/sundown
+curl http://127.0.0.1:8000/subwoofers/jlaudio
+```
+Synthetic fallback returns representative models if live fetch blocked.
+
+Enrichment (polite, delayed detail fetch) endpoint:
+```powershell
+curl "http://127.0.0.1:8000/subwoofers/sundown/collect?max_models=5&base_delay=0.6&jitter=0.25"
+```
+Mock enrichment test (`tests/test_sundown_enriched_mock.py`) ensures fallback items do not include enrichment fields.
+
+### Server Immediate Shutdown Troubleshooting
+If the server starts then immediately logs "Shutting down":
+- Avoid pressing Ctrl+C right after launch (seen as `^C` in terminal).
+- Disable auto-reload temporarily: `uvicorn main:app --host 127.0.0.1 --port 8000`.
+- Ensure no test runner is concurrently spawning and killing uvicorn.
+- The `/admin/restart` endpoint only triggers exit when explicitly posted to.
+If persistent, run a minimal stub to verify environment signal behavior.
 
 ## GitHub Actions & Pages Deployment
 
@@ -128,6 +150,7 @@ If Chromium cannot launch (CI without required permissions), the test is skipped
 - Add validation, error handlers, and custom exceptions
 - Environment-specific settings and Docker packaging
 - CI workflow (GitHub Actions) for tests & lint
+ - Implement and optimize 3D preview (mesh reuse, throttled updates)
 
 ## Recent Implementation Summary (Agent Changes)
 The project has undergone a series of iterative UI and frontend logic improvements while deliberately remaining framework-free on the client side.
@@ -145,10 +168,19 @@ Completed adjustments:
 - Standardized 3-up row alignment via new CSS helper class `.triple-field`.
 - Added cache-busted static asset references for proper refresh behavior.
 - Added heuristic documentation for cutout diameter (0.93× nominal) and backend override support.
+- Deprecated and removed per-hole `cutOut` flag (backend & frontend). All holes are now treated uniformly; filtering decisions (e.g. hiding filled holes) occur purely client-side. Backend `/export/cutsheet-holes` always returns every provided hole with its computed diameter.
 - Introduced optional Playwright smoke test description and usage.
+ - Added Finish selector with procedural wood variants (Light, Medium, Dark, Deep Walnut, Espresso) plus Flat grey theme.
+  - Default finish now set to Espresso (was Flat Grey); change via Finish selector.
+ - Implemented per-panel procedural wood grain (strength & knot density derived from variant) with deterministic seeding and caching.
  - Implemented local port physics estimation (Helmholtz) with slot, round, aero visualization overlays.
  - Added dual slot and multi-round/aero port overlay rendering with length indicators.
  - Added Show Port Overlay toggle to hide local (pre-server) port drawings while still showing server-computed designs.
+ - Implemented generic auto-fit for box dimensions: width/height/depth automatically expand (never shrink) to fit selected sub size (single or dual). Dual layout uses gap heuristic (max(0.75, 15% of diameter)); depth floor = max(dia*0.70, 6") + wall thickness.
+ - Archived Ghost Panels feature (semi-transparent offset back/right panels). Code preserved in `archive/ghost_panels_feature.js` for restoration; UI checkbox and 3D toggle removed.
+ - Added experimental GLB exporter + inline `<model-viewer>` AR preview (Generate GLB button creates `box.glb` and loads viewer if supported).
+ - GLB metadata enhancement: enclosure dimensions, wall thickness, finish, port config, hole specs, and derived gross/internal volumes injected into glTF `userData` plus downloadable JSON manifest.
+ - Added port displacement calculation (slot/round/aero) with per-port area & length; net internal volume after ports included in GLB `userData` and metadata JSON.
 
 Removed technologies / files:
 - `app/static/js/vendor/lemonade.min.js` and associated loader logic.
@@ -156,35 +188,38 @@ Removed technologies / files:
 - Legacy helper `lemonade_vendor.py`.
 
 Added/Modified assets:
-- Updated `box_builder.html` template: field ordering, menu integration, zoom bar repositioning, label rename, alignment improvements.
-- Updated CSS (`style.css`): added `.triple-field` and retained responsive grid design.
-- JS file `box_builder.js` cleaned (no framework references) and corrected logic around ghost edges & preview generation.
+- Updated `box_builder.html` template: field ordering, menu integration, zoom bar repositioning, label rename, alignment improvements, preview panel moved top-right via responsive grid, removed legacy Cutout Settings fieldset, added Subwoofer Model collapsible.
+- Updated CSS (`style.css`): added `.triple-field` and responsive grid rules powering two-column (form + preview) layout.
+- JS file `box_builder.js` cleaned (no framework references) and corrected logic around ghost edges & preview generation; added Subwoofer Model search (debounced) and model-driven nominal size updates.
 
 ## Validation Checklist
 Use this list to verify the current state after pulling latest changes:
 1. Static Assets
   - Confirm `/static/js/box_builder.js` loads (Network tab status 200).
   - Ensure no requests to removed WASM or Lemonade assets (search for `wasm` or `lemonade` in Network).
-2. Form Layout
-  - Wall Thickness appears above Port Design & Cutout Settings buttons.
-  - In the Dimensions panel, the row with Cut Diameter / Subwoofer Size / Sub Count is evenly spaced and labels are aligned.
-  - Sub Count label visible; source still uses `name="subConfig"` (check DOM inspector).
+2. Layout & Form Placement
+  - Preview panel renders top-right of the form on wide screens (CSS grid). On narrow/mobile width it stacks beneath the form.
+  - Wall Thickness input precedes collapsible menus (Port Design, Subwoofer Model) for early internal volume clarity.
+  - In the Dimensions panel, the triple row (Cut Diameter / Subwoofer Size / Sub Count) is evenly spaced and labels aligned.
+  - Sub Count label visible; source still uses `name="subConfig"`.
 3. Collapsible Menus
   - Port Design button reveals fieldset containing Port Type; closing/hiding works without layout shift.
-  - Cutout Settings fieldset includes override guidance and no duplicate Cut Diameter input outside intended rows.
+  - Subwoofer Model menu lists models (searchable). Legacy Cutout Settings fieldset is removed; cut diameter override now only appears in the triple row.
 4. Zoom Bar
-  - Positioned above the Preview heading; active button shows outlined highlight (no checkmark glyph).
+  - Centered above preview; active button shows outlined highlight (no checkmark glyph).
 5. SVG Preview Functionality
   - Changing Width/Height/Depth updates SVG and metrics (Gross/Net volumes).
-  - Toggling ghost panels renders semi-transparent hatched panels; ghost edge lines visible.
+  - Ghost panels removed (archived); no hatch elements should appear.
   - Hole selection and arrow key nudging works (selected hole outlines thicker or styled differently as per JS code).
   - Undo/Redo (Ctrl+Z / Ctrl+Y) affects last dimensional or hole movement changes (history capped at 20).
   - Show Port Overlay: when unchecked, local estimated port shapes (slot/round/aero) are hidden; server design still appears if computed.
 6. Cut Diameter Heuristic
   - Leave Cut Diameter blank: computed hole diameter = nominal size × 0.93.
   - Enter a value: override applies immediately.
+  - Selecting a Subwoofer Model updates nominal size; heuristic re-applies if no explicit override entered.
 7. Sub Count Behavior
   - Switching from Single to Dual adds second hole symmetrically (verify bounds enforcement).
+  - Increasing sub size (e.g., 10" → 15") auto-expands width/height/depth as needed; decreasing size does not reduce existing dimensions.
 8. No Console Errors
   - Open DevTools; console should be free of errors after initial load.
 9. Restart Server Button
@@ -192,6 +227,10 @@ Use this list to verify the current state after pulling latest changes:
 10. Tests
   - `pytest -q` passes unit tests.
   - Optional: run Playwright smoke test; should load page, remove spinner, confirm preview updates.
+
+  11. GLB Export
+    - Click Generate GLB; a file `box.glb` downloads and `<model-viewer>` shows the model (src blob URL populated).
+    - Click Download Metadata JSON; `box_metadata.json` contains full state + derived volume metrics.
 
 ## Manual Command Reference (Windows PowerShell)
 ```powershell
@@ -262,7 +301,22 @@ Suggested configuration tweaks:
 }
 ```
 
-## Standard Cutout Preset
+## Subwoofer Model Selection & Standard Cutout Preset
+The builder includes a Subwoofer Model collapsible enabling search & selection. Selecting a model updates all hole nominal sizes and triggers dimension auto-fit (expansion only) plus heuristic cut diameter recalculation if no explicit override.
+
+Search UX:
+- Debounced (~220 ms) request to `/subwoofers/search`; falls back to local mock if endpoint missing.
+- Temporary "Searching…" option appears until results loaded.
+- Selection pushes history entry (undo/redo aware).
+
+Cut Diameter Precedence:
+1. User-entered override
+2. (Future) Manufacturer spec from model data
+3. Heuristic fallback (0.93× nominal)
+
+Model selection never silently shrinks existing dimensions; only expands to maintain clearances for chosen size and dual layout spacing heuristics.
+
+Standard Cutout Preset
 When a selected subwoofer model does not have manufacturer-provided cutout data, a heuristic is applied:
 
 ```
@@ -299,22 +353,23 @@ Planned enhancements:
 ## Box Builder (Axis-Aligned Vanilla JS)
 The `/box-builder` page uses a framework-free JavaScript implementation (`app/static/js/box_builder.js`). The preview is axis-aligned for clarity and determinism (no faux 3D skewing).
 
-Current Front-End Features:
-- Editable dimensions: width, height, depth (with clamping)
-- Subwoofer size select (8 / 10 / 12 / 15)
-- Standard Cutout Preset: auto hole diameter = nominal × 0.93 (heuristic)
-- Optional per-hole diameter override toggle + value input
-- Multi-hole support (single/dual layout selection) with click-to-select
-- Keyboard nudging of selected hole (Arrow keys; Shift = ×5)
-- Bounds enforcement with automatic adjustments + toast message
-- Ghost panels (left side plus optional back/right ghost rectangles) toggle with hatch (opacity 0.25)
-- Undo / Redo (Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z)
-- Zoom presets (Close / Normal / Wide) above the preview
-- State Reset button (restores initial default state without page reload)
-- Dev-only Restart Server button (POST /admin/restart) when running with `--reload` & debug=True
-- Live SVG preview with layered rendering order: ghosts → front → holes → dimension lines → toast
- - Local port estimation overlay (slot, dual slot, round, aero) with dashed length indicator and annotation.
- - Show Port Overlay toggle to hide local preview without affecting server-computed port visualization.
+Current Front-End Features (3D-Only Architecture):
+- Editable dimensions (W/H/D) with clamping & auto-sizing for dual subs
+- Subwoofer size select (8 / 10 / 12 / 15) and Cut Diameter override (heuristic 0.93× nominal when blank)
+- Single / Dual layout with symmetry positioning and edge margin enforcement
+- Click-to-select hole + keyboard nudging (Arrow keys; Shift = ×5)
+-- (Archived) Ghost panels toggle (removed from UI; logic retained internally for potential restoration)
+- Undo / Redo history (20 entries) & toast feedback
+- Zoom presets (Close / Normal / Wide) influence 2D SVG framing logic (SVG kept internal for upcoming export)
+- State Reset & Dev-only Restart Server button
+- Internal SVG generator retained (not mounted) for future Download SVG feature
+- Always-on Three.js 3D preview (no checkbox) with inertial orbit controls, Shift+drag acceleration, auto-rotate toggle (default off), persistent camera & rotation state (double-click reset removed for simplicity)
+- Local port physics estimation (slot / round / aero) powering metrics and 3D port meshes
+- Show Port Overlay toggle hides 3D port meshes (metrics remain)
+ - Finish selector controlling procedural wood material variant (cached textures / per-panel variation)
+ - Grid visibility toggle (persists; hides helper for clean screenshots)
+ - Shadow toggle (persists; disables shadowMap + clears panel shadow flags for performance / clarity)
+  (Both toggles persist via localStorage keys: `boxBuilder3DGrid`, `boxBuilder3DShadows`.)
 
 Planned Enhancements:
 - SVG download (button stub present)
@@ -325,6 +380,7 @@ Planned Enhancements:
 - Manufacturer spec fetch & auto-fill overrides
 - Future frequency visualization (replaces retired grid snap concept)
  - Server vs local tuning discrepancy indicator (highlight variance threshold)
+ - 3D improvements: internal bracing meshes, transparent cutaways, performance debouncing
 
 Customization Pointers:
 - Adjust ghost offset logic inside `generatePreview()` (currently proportional to depth).
@@ -345,20 +401,27 @@ Troubleshooting Quick Reference:
 | Nudge not working | Hole not selected | Click desired hole in preview before using arrows |
 | Diameter different than expected | Heuristic applied (0.93×) vs override/spec | Enable override or supply manufacturer spec to backend |
 | Override ignored | Toggle unchecked | Check the override checkbox and enter numeric diameter |
+| Finish not visually changing | Variant uses similar palette or cache reused | Switch to a higher contrast variant (e.g. Light ↔ Espresso) to verify change |
+| One panel shows different grain scale | Expected per-panel variation seeding | This is intentional; deterministic by panel index & seed |
+| Performance hiccup on first finish switch | Initial procedural texture generation | Subsequent selections use cached textures |
 | Undo skips changes | Non-committed update (selection only) | Dimension edits & hole movements commit; selection alone doesn’t push history |
 
-Verification Steps (Browser):
+Verification Steps (Browser - 3D):
 1. Start server: `uvicorn main:app --reload`
 2. Open http://127.0.0.1:8000/box-builder
-3. Change Width; SVG resizes and metrics update.
-4. Add a hole; a new centered circle appears (selected highlight).
-5. Nudge with ArrowRight — hole center moves smoothly (fixed 0.25 in base step; Shift = ×5).
-6. Toggle ghost; ghost panels render with hatch.
-7. Press Ctrl+Z then Ctrl+Y to confirm undo/redo of last movement.
-8. Enable override; set diameter smaller; hole shrinks instantly.
-9. Switch Zoom preset (Close/Normal/Wide) and observe reframe.
-10. Click Reset State; dimensions revert to defaults and toast shows "State reset.".
-11. (Dev) Click Restart Server; toast shows "Server restarting..." and after auto-reload the spinner is gone again.
+3. Edit width; metrics update and 3D box mesh resizes.
+4. Switch Sub Count to Dual; auto expansion occurs if needed (toast may show). Two hole cylinders appear.
+5. Nudge a selected hole with Arrow keys; cylinder moves in 3D.
+6. (Ghost panels feature archived; skip — no hatch elements should appear.)
+7. Ctrl+Z then Ctrl+Y to undo/redo a prior dimension edit.
+8. Enter Cut Diameter override; hole cylinder radius updates.
+9. Toggle Auto Rotate button to stop/start slow spin.
+10. Shift+drag accelerates orbit.
+11. Enable port inputs + Show Internal; configure slot / round / aero parameters; port meshes render.
+12. Uncheck Show Port Overlay; port meshes hide while tuning metrics persist.
+13. Cycle Finish selector through variants; observe palette & grain density changes. Re-select a previous variant (should apply instantly due to cache reuse, no flicker).
+14. Toggle Grid: helper lines appear/disappear; state persists after reload.
+15. Toggle Shadows: panel self-shadows and floor shadow appear/disappear; state persists after reload.
 
 Design Principles:
 1. Deterministic scaling & centering.
@@ -372,6 +435,8 @@ If Something Looks Wrong:
 - Confirm the inline SVG `<style>` block appears (ensures generate executed).
 - Verify each expected input has a `name` attribute (required for query selectors).
 - Check that history length ≤ 20 (else logic may have been altered).
+ - For 3D preview: ensure `three_preview.js` loaded (Network 200) and canvas present; no checkbox required.
+ - Advanced controls: Shift+drag speed-up; Auto Rotate toggle; double-click reset; persistent camera (localStorage `boxBuilder3DCam`).
 
 SVG Download Roadmap:
 Will serialize current SVG outerHTML, prepend XML header, and trigger a blob URL download with a descriptive filename: `box_w{W}_h{H}_d{D}_holes{N}.svg`.
@@ -435,6 +500,88 @@ Notes:
 - Add caching or persistence for results if scraping heavy pages.
 - Consider rotating user agents and adding retries/backoff for robustness.
 
+### Sundown Manufacturer Scrape (8" Subs)
+
+A lightweight manufacturer endpoint provides 8" Sundown Audio subwoofer models. It attempts a live scrape of the public catalog page and falls back to a small synthetic list if the site blocks requests or the network is unavailable.
+
+Endpoint:
+```
+GET /subwoofers/sundown
+```
+Response shape:
+```jsonc
+{
+  "total": 4,
+  "source_page": "https://sundownaudio.com/pages/sundown-subwoofer-page",
+  "items": [
+    {
+      "brand": "Sundown Audio",
+      "model": "SA-8 V.3",
+      "size_in": 8.0,
+      "cutout_diameter_in": 7.44,
+      "cutout_estimated": true,
+      "source": "sundown",
+      "url": "https://sundownaudio.com/pages/sundown-subwoofer-page#model-sa-8-v.3",
+      "scraped_at": 1712345678.123
+    }
+  ]
+}
+```
+
+Cutout diameter uses the same heuristic (0.93 × nominal) unless a precise spec is later integrated. Fallback models are labeled with `source: sundown-synthetic` so they can be visually distinguished or filtered client-side.
+
+Persistence:
+- Results are merged into the main subwoofer DB (`subwoofers_db.json`) without overwriting richer existing records.
+- A size bucket snapshot updates `subwoofers/8/latest.json` after each successful scrape.
+
+Development Tips:
+- If repeated 403/timeout occurs, the endpoint still returns the synthetic fallback ensuring the UI remains functional.
+- To extend to other sizes or brands, duplicate the helper structure in `app/scraping/sundown.py` (or create a new module) and add a corresponding router endpoint.
+- Consider adding per-model manufacturer cutout overrides once specs are collected; those will supersede the heuristic and set `cutout_estimated: false`.
+
+### JL Audio Manufacturer Scrape (8" Subs)
+
+Endpoint:
+```
+GET /subwoofers/jlaudio
+```
+Behavior mirrors the Sundown endpoint. It scrapes the JL Audio car subwoofer collection page for 8" product links (pattern match on `8"`, `8 inch`, or model tokens beginning with `8W`). Non-subwoofer items (amplifiers, enclosures, accessories) are filtered out.
+
+Sample response (abridged):
+```jsonc
+{
+  "total": 1,
+  "source_page": "https://www.jlaudio.com/collections/car-subwoofers",
+  "items": [
+    {
+      "brand": "JL Audio",
+      "model": "8W3v3",
+      "size_in": 8.0,
+      "cutout_diameter_in": 7.44,
+      "cutout_estimated": true,
+      "source": "jlaudio",
+      "url": "https://www.jlaudio.com/products/8w3v3-4",
+      "scraped_at": 1712345678.321
+    }
+  ]
+}
+```
+
+Fallback: If live fetch fails or HTML parsing yields no matches, a synthetic list with representative models (`8W1v3`, `8W3v3`, `8W7AE`, `CP108LG-W3v3`) returns under `source: jlaudio-synthetic`.
+
+Persistence & Merge:
+- Same merge & size bucket update strategy as Sundown.
+- Duplicate URLs are deduped; re-running the endpoint will not balloon entries.
+
+Extending to Other Sizes:
+- Copy `app/scraping/jlaudio.py` and adjust size filter (e.g., `10"` patterns) plus endpoint path (`/subwoofers/jlaudio10`).
+- Consider unifying manufacturer scrapers into a single registry with brand + size parameters if expanding further.
+
+Testing:
+- `tests/test_jlaudio.py` covers response shape, bucket persistence, and idempotent merging.
+- Add a forced-fallback test by monkeypatching `_fetch_html` to return `None` if you need explicit synthetic path coverage.
+
+
 ## Show Port Overlay Feature
 
 The builder includes a real-time, local port geometry estimation prior to server-side design computation. Supported types: slot (single/dual), round (multiple), aero (flared). Each overlay displays a dashed physical length indicator (approximate) for the first port and an annotated `L≈` label.
@@ -461,13 +608,240 @@ Future Improvements:
  - Velocity-based color gradients.
  - End correction differential display (effective vs physical length).
  - Discrepancy badge when local vs server tuning differs beyond threshold.
+  - 3D correlation: show same port effective length highlight in 3D view.
 
-Quick Validation:
- 1. Enter target tuning & slot height → slot overlay appears.
- 2. Change port type to round, set diameter → circles appear with length line.
- 3. Switch to aero, set flare radius → dashed flare ring added.
- 4. Uncheck Show Port Overlay → local shapes disappear (if server design not yet computed).
- 5. Compute server design → server preview persists; toggle has no effect on server shapes.
+Quick Validation (Ports + 3D):
+ 1. Enter target tuning & slot height → slot meshes appear; metrics show estimated length.
+ 2. Change port type to round and set diameter → round cylinders appear (spacing honored).
+ 3. Switch to aero & add flare radius → cylinders amber + flare torus ring.
+ 4. Uncheck Show Port Overlay → port meshes disappear; metrics unchanged.
+ 5. Compute server design (backend) → server metrics populate (3D uses local meshes until server mesh feature added).
+ 6. Toggle Auto Rotate Off/On → rotation stops/starts.
+
+## 3D Preview (Always On)
+The builder now relies on a persistent Three.js WebGL canvas for visualization. The SVG path remains internally generated for metrics consistency & future export, but is not rendered in the UI.
+
+Rendered Elements:
+- Box mesh (exterior only)
+- Hole cylinders (forward-facing, semi-transparent)
+- Port meshes (slot rectangles / round cylinders / aero cylinders + flare ring)
+- Optional slow box rotation (toggleable)
+
+Camera & Interaction:
+- Drag orbit with inertial damping; Shift accelerates
+- Wheel zoom (bounded)
+- Double-click reset
+- Auto Rotate toggle; camera + rotation persistence via localStorage
+
+Performance & Limits:
+- Full group rebuild each state change (planned geometry reuse & selective transforms)
+- No CSG subtraction (visual approximation only)
+- Port meshes suppressed when Show Port Overlay unchecked (server mesh integration planned)
+ - Procedural wood textures generated & cached per (variant, panelIndex, seed, strength, knots) to avoid redundant canvas draws & GPU uploads.
+
+Troubleshooting:
+- Missing canvas: verify scripts loaded; fallback message if CDN blocked
+- Distorted view: resize window to update aspect
+- Stale camera after reset: ensure localStorage not blocked
+
+Roadmap:
+- Debounced rebuilds & mesh reuse
+- Internal bracing & panel thickness depiction
+- SVG + GLTF export
+- Slice / cutaway mode
+- Port effective vs physical length visual differentiation
+ - Finish customization sliders (grain strength, knot toggle) & randomize seed button
+ - Material export & screenshot helper
+ - Potential reintroduction of archived "Fun Spin" animation as an optional accessibility/engagement mode (currently removed and stored under `archive/`).
+
 
 ## License
 MIT (add LICENSE file if needed)
+
+---
+
+## Cut Sheet PDF Export
+The builder can generate a multi-page PDF containing:
+
+1. Overview page with exterior dimensions, join style, kerf thickness, utilization summary.
+2. One page per 4x8 (96" x 48") MDF sheet showing optimized panel placement using a simplified maximal-rectangles (guillotine split) algorithm with kerf compensation.
+
+### Endpoint
+`POST /export/pdf`
+
+Body (JSON):
+```json
+{
+  "width": 18.0,
+  "height": 12.0,
+  "depth": 10.0,
+  "wall_thickness": 0.75,
+  "include_ports": false
+}
+```
+
+Response: `application/pdf` (attachment `box_cutsheet.pdf`).
+
+### Panel Derivation & Join Styles
+Assumes input width/height/depth are exterior dimensions.
+
+Join Styles:
+| Style | Description | Adjustments |
+|-------|-------------|-------------|
+| front_back_overlap | Front/Back span full width; sides butt into them | No width reduction; panels: Front/Back (W×H), Left/Right (D×H), Top/Bottom (W×D) |
+| side_overlap | Sides span full depth; Front/Back sit between sides | Front/Back & Top/Bottom width reduced by 2×wall_thickness (inner width) |
+
+Brace & Port Panels (optional):
+- Slot Port Walls: Each divider sized `slot_port_width × slot_port_height`.
+- Brace Strips: Vertical strips sized `brace_strip_width × (H - 2×wall_thickness)` (fallback to full height if subtraction <= 0).
+
+### Packing Algorithm (Max-Rect Simplified)
+For each sheet a list of free rectangles is maintained. Panels are sorted by descending area. Each panel attempts placement into the first free rectangle that can fit it (optionally rotated). Kerf thickness is added to both dimensions for fit testing to enforce spacing. When placed, the occupied rectangle is removed and split into right and bottom free rectangles (guillotine split). A new sheet is introduced when no existing free rectangle can accommodate the next panel. Utilization = (sum(panel areas) / (sheet_count × sheet_area)).
+
+Kerf Compensation:
+- Input `kerf_thickness` (default 0.125 in) is treated as spacing and added to width/height when evaluating free space.
+- Actual stored panel size remains true dimensions; the free rectangles shrink by panel dimension + kerf to leave a cutting gap.
+
+### Front-End Usage
+Fill dimensions, pick Join Style, optionally check Include Slot Port Panels / Include Brace Strips and fill their parameters. Click "Download Cut Sheet PDF". Filename pattern: `box_cutsheet_{SHEETS}sheet.pdf`.
+
+### Future Improvements
+- More advanced heuristics: best-area-fit / minimal leftover splitting ordering.
+- Skyline / maximal rectangles hybrid for higher utilization.
+- True kerf-aware dimension reduction (option to subtract kerf rather than spacing). 
+- Rabbet/dado/miter join styles auto-adjusting Top/Bottom/Side dimensions.
+- Multi-material & thickness grouping (generate separate sheets per material).
+- Piece labeling with drill guides, driver cutout center coordinates, port wall orientation.
+- DXF/SVG export for CNC workflows.
+- Offcut inventory tracking and reuse suggestions.
+
+### Troubleshooting
+| Symptom | Cause | Resolution |
+|---------|-------|-----------|
+| 500 error | Missing `reportlab` install | Run `pip install -r requirements.txt` |
+| 400 error (panel too large) | Panel exceeds sheet even rotated | Adjust dimensions or split panel manually |
+| Excessive sheet usage | Kerf set too high or many braces/ports | Reduce kerf or brace/port counts |
+| PDF blank | `reportlab` font issue (rare) | Update reportlab; view using Adobe Reader |
+| Missing port/brace pieces | Check Include checkboxes & numeric fields | Ensure non-zero counts and dimensions |
+| Panels overlap visually | Bug in packing split logic | Report issue; temporarily reduce kerf or disable rotation |
+
+### Local Test (PowerShell)
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/export/pdf -Method Post -ContentType 'application/json' -Body '{"width":18,"height":12,"depth":10,"wall_thickness":0.75}' -OutFile cutsheet.pdf
+```
+
+Open `cutsheet.pdf` to verify both pages render correctly.
+
+## Sheet Layout SVG & DXF Export
+Two additional endpoints provide CNC-friendly vector outputs of the packed panel layout produced by the same derivation + maximal-rectangles packing used for the PDF.
+
+### Endpoints
+`POST /export/svg` → `image/svg+xml` attachment `layout_sheet_{SHEETS}sheet.svg`
+
+`POST /export/dxf` → `application/dxf` attachment `box_cutsheet_{SHEETS}sheet.dxf`
+
+Request Body: Identical to PDF (`width`, `height`, `depth`, `wall_thickness`, `join_style`, `kerf_thickness`, optional port & brace params).
+
+### SVG Layout Details
+- Scaling: 1 inch = 10 px.
+- Multiple sheets rendered side-by-side with 40 px gap.
+- Each sheet wrapped in a `<g id="sheetN">` group with a border rectangle.
+- Panels rendered as `<rect class="panel">` elements with text labels (name and size; rotated panels marked with `R`).
+- Kerf spacing appears visually as gaps between rectangles.
+- Lighter fill (`#eee`) and stroke for panels; heavy stroke for sheet border.
+
+### DXF Layout Details (Minimal ASCII R12-Like)
+- Layers: `SHEET` (sheet outlines) and `PANEL` (panel rectangles).
+- Units: inches (no scaling; each sheet offset +X by 10 in gap).
+- Entities: Only LINE segments forming rectangles (no POLYLINE/TEXT yet).
+- File sections: HEADER, TABLES (LAYER definitions), ENTITIES, EOF.
+- Import: Tested with common CAM/CAD apps; if layer coloring not preserved, verify import settings.
+
+### Example DXF Snippet (Truncated)
+```
+0
+SECTION
+2
+HEADER
+0
+ENDSEC
+0
+SECTION
+2
+TABLES
+0
+TABLE
+2
+LAYER
+70
+2
+0
+LAYER
+2
+SHEET
+70
+0
+62
+7
+6
+CONTINUOUS
+0
+LAYER
+2
+PANEL
+70
+0
+62
+1
+6
+CONTINUOUS
+0
+ENDTAB
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES
+0
+LINE
+8
+SHEET
+10
+0.0000
+20
+0.0000
+11
+96.0000
+21
+0.0000
+0
+ENDSEC
+0
+EOF
+```
+
+### Validation
+- SVG file opens in browser: contains `<svg>` root, `<defs>` style, panel `<rect>` and `<text>` labels.
+- DXF begins with `0\nSECTION` and ends with `0\nEOF`.
+- Kerf gaps visible in SVG; DXF spaces reflect panel placements (no overlapping LINE rectangles).
+
+### Future Enhancements
+- Add optional drill center marks (CIRCLE entities / small crosshair in SVG).
+- Include text entities in DXF for panel names & dimensions.
+- Layer for cutout circles (driver holes) with accurate diameters.
+- Option to export combined single-sheet view for CAMs that auto-step-n-repeat.
+- Dogbone or fillet markers for CNC inside corners.
+- Arcs for circular cutouts (DXF ARC entities) and port circles.
+
+### Troubleshooting
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| DXF imports with giant scale | CAD expects mm | Set units to inches or scale by 25.4 |
+| Missing layers in CAM | Import setting flattening layers | Enable layer import / mapping in preferences |
+| SVG shows no labels | Font blocked or truncated download | Re-download; ensure `<text>` elements present |
+| Panels overlap | Packing regression | Reduce kerf or report issue; verify join style & dimensions |
+| DXF lines merged into polyline | Viewer auto-merging | Accept or disable polyline merge in settings |
+
+---
+
