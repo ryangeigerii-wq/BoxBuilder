@@ -22,7 +22,7 @@
     // ---------------- Finish / Wood Texture Helper Functions ----------------
     function mulberry32(a) { return function () { var t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
     function hexToRgba(hex, a) { const h = hex.replace('#', ''); const n = parseInt(h, 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return `rgba(${r},${g},${b},${a})`; }
-    // Sync with <select name="finish"> options: light, medium, dark, deep-walnut, espresso, flat, wood1/2/3.
+    // Sync with <select name="finish"> options: light, medium, dark, deep-walnut, espresso, flat, wood1/2/3, fun.
     // Distinct baseStrength values ensure texture UUID differences across variants for tests.
     const FINISH_VARIANTS = {
         flat: { type: 'flat', color: '#c7c7c7' },
@@ -33,7 +33,8 @@
         wood3: { stops: ['#8b5a2b', '#5a3a1c'], grain: '#3b2412', knot: '#2a170c', baseStrength: 1.08 },
         'deep-walnut': { stops: ['#6d4a2e', '#4a2f1b'], grain: '#3a2413', knot: '#26170c', baseStrength: 1.18 },
         dark: { stops: ['#5a3b25', '#3b2516'], grain: '#2a170c', knot: '#140c06', baseStrength: 1.26 },
-        espresso: { stops: ['#4a2d18', '#2b1a0c'], grain: '#190e06', knot: '#0d0703', baseStrength: 1.32 }
+        espresso: { stops: ['#4a2d18', '#2b1a0c'], grain: '#190e06', knot: '#0d0703', baseStrength: 1.32 },
+        fun: { type: 'fun', color: '#000000', glow: '#00ff66' }
     };
     function generateWoodTextureCached(variantKey, panelIndex, seed, strength, useKnots) {
         const cacheKey = `${variantKey}|${panelIndex}|${seed}|${strength}|${useKnots}`;
@@ -43,6 +44,39 @@
             const flatCanvas = document.createElement('canvas'); flatCanvas.width = flatCanvas.height = 4;
             const fctx = flatCanvas.getContext('2d'); fctx.fillStyle = spec.color; fctx.fillRect(0, 0, 4, 4);
             const flatTex = new THREE.CanvasTexture(flatCanvas); WOOD_TEX_CACHE.set(cacheKey, flatTex); return flatTex;
+        }
+        if (spec.type === 'fun') {
+            const funCanvas = document.createElement('canvas'); funCanvas.width = funCanvas.height = 512;
+            const fctx = funCanvas.getContext('2d');
+            // Black base
+            fctx.fillStyle = spec.color; fctx.fillRect(0, 0, 512, 512);
+            // Matrix-style digital rain effect with animated green characters
+            const rng = mulberry32(seed + panelIndex * 101);
+            const cols = 32; const charSize = 512 / cols;
+            fctx.font = `${charSize * 0.8}px monospace`;
+            fctx.fillStyle = spec.glow;
+            const chars = '01アイウエオカキクサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+            for (let col = 0; col < cols; col++) {
+                const trails = 5 + Math.floor(rng() * 12);
+                for (let row = 0; row < trails; row++) {
+                    const x = col * charSize + charSize * 0.15;
+                    const y = (row * charSize + charSize * 0.7 + rng() * charSize * 3) % 512;
+                    const char = chars[Math.floor(rng() * chars.length)];
+                    const alpha = 0.3 + rng() * 0.7;
+                    fctx.fillStyle = `rgba(0, 255, 102, ${alpha})`;
+                    fctx.fillText(char, x, y);
+                }
+            }
+            // Add edge glow for box-shadow effect
+            fctx.strokeStyle = spec.glow;
+            fctx.lineWidth = 4;
+            fctx.shadowBlur = 8;
+            fctx.shadowColor = spec.glow;
+            fctx.strokeRect(2, 2, 508, 508);
+            const funTex = new THREE.CanvasTexture(funCanvas);
+            funTex.wrapS = funTex.wrapT = THREE.RepeatWrapping;
+            WOOD_TEX_CACHE.set(cacheKey, funTex);
+            return funTex;
         }
         const size = 512;
         const cvs = document.createElement('canvas'); cvs.width = cvs.height = size;
