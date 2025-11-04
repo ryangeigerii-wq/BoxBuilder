@@ -42,7 +42,7 @@ User edits form inputs → `update()` called → state validated & clamped → h
 - `app/models/box.py`: Internal Python model representations (e.g., Box domain model if present).
 - `app/schemas/box.py`: Pydantic Box schema for request/response validation.
 - `app/schemas/subwoofer.py`: Pydantic schema for subwoofer cutout responses.
-- `app/scraping/*`: Fetching and parsing logic for external product pages (currently Crutchfield integration).
+- `app/scraping/*`: (Placeholder) Previously housed external product page scrapers; currently no active third-party scraping logic.
 
 ## 7. Frontend Structure
 - Template `box_builder.html`: Form layout, zoom controls, collapsible menus, preview container.

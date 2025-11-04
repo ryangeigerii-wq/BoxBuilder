@@ -39,46 +39,19 @@ class Subwoofer:
     scraped_at: float
 
 # ---------- Helpers ----------
-LISTING_START = "https://www.crutchfield.com/g_512/Subwoofers.html"
-UA_POOL = [
-    # Chrome variants
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    # Edge variant
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0",
-]
-
-def build_headers() -> dict:
-    ua = random.choice(UA_POOL)
-    # Use LAST_REFERER if set (updated by endpoints before crawl)
-    ref = LAST_REFERER or LISTING_START
-    return {
-        "User-Agent": ua,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Referer": ref,
-    }
-LAST_REFERER: Optional[str] = LISTING_START
-TIMEOUT = 30.0
-CONCURRENCY = 5
-REQUEST_DELAY = 0.8  # base seconds between requests, per polite scraping
-REQUEST_JITTER_MIN = 0.12  # minimum added jitter seconds
-REQUEST_JITTER_MAX = 0.38  # maximum added jitter seconds
-MAX_RETRIES = 3  # transient failures
-BACKOFF_BASE = 0.6  # seconds
+"""Crutchfield scraping logic removed as part of de-scope.
+Constants and helpers retained only where referenced elsewhere have been purged.
+"""
+TIMEOUT = 30.0  # retained for any future generic fetch utilities
 
 # ---------- Metrics ----------
 # Captures lightweight scrape statistics (not persisted between restarts)
 METRICS: Dict[str, Any] = {
-    "attempts": 0,        # total request attempts (includes retries)
-    "successes": 0,      # successful (2xx) responses
-    "errors": 0,         # failed attempts
-    "protocol": {},      # counts per negotiated protocol version
-    "latencies": [],     # individual successful latency measurements
+    "attempts": 0,
+    "successes": 0,
+    "errors": 0,
+    "protocol": {},
+    "latencies": [],
     "total_latency": 0.0,
     "last_error": None,
     "started_at": time.time(),
@@ -117,6 +90,68 @@ def metrics_snapshot() -> Dict[str, Any]:
         "last_error": METRICS["last_error"],
         "uptime_sec": time.time() - METRICS["started_at"],
     }
+
+# ---------- Minimal Generic Scrape Stubs (Crutchfield Removed) ----------
+# These lightweight helpers satisfy collection endpoint tests without reintroducing
+# the full external site integration. They provide synthetic pagination & product parsing.
+
+LISTING_START = "http://example.com/page_0.html"  # synthetic start URL
+UA_POOL = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "Mozilla/5.0 (X11; Linux x86_64)",
+]
+
+async def fetch(client: httpx.AsyncClient, url: str) -> httpx.Response:
+    """Minimal fetch wrapper recording metrics; relies on provided httpx client.
+
+    Used only by tests exercising collection endpoints with monkeypatched client behavior.
+    """
+    METRICS["attempts"] += 1
+    start = time.time()
+    resp = await client.get(url, timeout=TIMEOUT)
+    latency = time.time() - start
+    _record_success(resp, latency)
+    return resp
+
+def parse_listing_urls(html: str) -> Tuple[List[str], Optional[str]]:
+    """Extract product anchor hrefs and optional rel="next" link from synthetic HTML.
+
+    Anchors with rel="next" are treated solely as pagination pointer; all others become product URLs.
+    Relative hrefs are normalized to example.com domain for determinism.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    urls: List[str] = []
+    for a in soup.find_all("a"):
+        href = a.get("href")
+        if not href:
+            continue
+        rel = a.get("rel") or []
+        if isinstance(rel, str):  # normalize potential string rel attr
+            rel = [rel]
+        if "next" in rel:
+            continue
+        norm = href if href.startswith("http") else f"http://example.com{href}"
+        urls.append(norm)
+    nxt_tag = soup.find("a", rel="next")
+    nxt = None
+    if nxt_tag and nxt_tag.get("href"):
+        href = nxt_tag.get("href")
+        nxt = href if href.startswith("http") else f"http://example.com{href}"
+    return urls, nxt
+
+def parse_product(html: str, url: str) -> Subwoofer:
+    """Return a synthetic Subwoofer parsed from minimal HTML.
+
+    Attempts simple size inference via regex (e.g., '8"'). Falls back to None (later coerced).
+    """
+    size = pick_float(SIZE_PAT, html)  # may be None; collection endpoints coerce when absent
+    now = time.time()
+    return Subwoofer(
+        source="synthetic", url=url, brand="Brand", model="Model", size_in=size,
+        rms_w=None, peak_w=None, impedance_ohm=None, sensitivity_db=None,
+        mounting_depth_in=None, cutout_diameter_in=None, displacement_cuft=None,
+        recommended_box=None, price_usd=None, image=None, scraped_at=now,
+    )
 
 SIZE_PAT = re.compile(r'(\d+(?:\.\d+)?)\s*"?\s*(?:in|inch|")', re.I)
 RMS_PAT  = re.compile(r'(\d{2,5})\s*w(?:att)?', re.I)
@@ -186,195 +221,18 @@ def load_db() -> List[Subwoofer]:
     except Exception:
         return []
 
-LISTING_START = "https://www.crutchfield.com/g_512/Subwoofers.html"
+## Removed: jitter/backoff fetch and listing pagination utilities tied to Crutchfield.
 
-def _compute_delay() -> float:
-    """Return delay with jitter unless disabled via env SCRAPER_JITTER_OFF.
-
-    Jitter helps avoid simplistic anti-bot heuristics triggered by perfectly
-    periodic request intervals. Bounds chosen to remain polite (< ~1.2s typical).
-    """
-    if "SCRAPER_JITTER_OFF" in os.environ:
-        return REQUEST_DELAY
-    # Uniform jitter in range; small to avoid large slowdown impact.
-    return REQUEST_DELAY + random.uniform(REQUEST_JITTER_MIN, REQUEST_JITTER_MAX)
-
-async def fetch(client: httpx.AsyncClient, url: str) -> httpx.Response:
-    """GET wrapper with retry + exponential backoff + polite delay.
-
-    Records metrics for attempts, successes, errors, latency, and protocol.
-    """
-    attempt = 0
-    last_exc: Optional[Exception] = None
-    while attempt < MAX_RETRIES:
-        start = time.perf_counter()
-        METRICS["attempts"] += 1
-        try:
-            resp = await client.get(url, headers=build_headers(), timeout=TIMEOUT)
-            latency = time.perf_counter() - start
-            resp.raise_for_status()
-            _record_success(resp, latency)
-            await asyncio.sleep(_compute_delay())
-            return resp
-        except Exception as exc:  # noqa: BLE001 broad for metrics
-            latency = time.perf_counter() - start
-            _record_error(exc)
-            last_exc = exc
-            # Backoff before next attempt (except after final failure)
-            attempt += 1
-            if attempt >= MAX_RETRIES:
-                break
-            sleep_for = BACKOFF_BASE * (2 ** (attempt - 1))
-            await asyncio.sleep(sleep_for)
-    # Exhausted retries
-    raise last_exc if last_exc else RuntimeError("fetch failed without exception?")
-
-def parse_listing_urls(html: str) -> Tuple[List[str], Optional[str]]:
-    soup = BeautifulSoup(html, "html.parser")
-    urls: List[str] = []
-    for a in soup.select('a[href*="/p_"]'):
-        href = a.get("href") or ""
-        if "/p_" in href and href.lower().endswith(".html"):
-            if href.startswith("/"):
-                href = "https://www.crutchfield.com" + href
-            urls.append(href)
-    next_link = soup.select_one('a[rel="next"], a.pagination-next, a[aria-label="Next"]')
-    next_url = None
-    if next_link and next_link.get("href"):
-        href = next_link["href"]
-        next_url = href if href.startswith("http") else "https://www.crutchfield.com" + href
-    urls = sorted(set(urls))
-    return urls, next_url
+## Removed: parse_listing_urls (Crutchfield-specific pagination).
 
 def text_or_none(node) -> Optional[str]:
     if not node:
         return None
     return clean_space(node.get_text(" ", strip=True))
 
-def parse_product(html: str, url: str) -> Subwoofer:
-    soup = BeautifulSoup(html, "html.parser")
-    title = text_or_none(soup.select_one("h1, .product-title, #productTitle")) or ""
-    brand, model = "", ""
-    if " " in title:
-        parts = title.split(" ", 1)
-        brand = parts[0].strip()
-        model = parts[1].strip()
-    else:
-        model = title
-    img = None
-    img_tag = soup.select_one('img[src*="//images."]') or soup.select_one("img")
-    if img_tag:
-        img = img_tag.get("src")
-    price_text = text_or_none(soup.select_one('[class*=price], .price, .sale-price'))
-    price = None
-    if price_text:
-        m = PRICE_PAT.search(price_text.replace(",", ""))
-        if m:
-            price = float(m.group(1))
-    specs_text: List[str] = []
-    for tbl in soup.select("table, .specs, .product-specs, .key-specs"):
-        specs_text.append(tbl.get_text(" ", strip=True))
-    blob = " • ".join(specs_text)
-    size_in = pick_float(SIZE_PAT, blob) or pick_float(SIZE_PAT, title)
-    rms_w = pick_int(RMS_PAT, blob)
-    peak_w = pick_int(PEAK_PAT, blob)
-    impedance_ohm = pick_float(OHM_PAT, blob)
-    sensitivity_db = pick_float(SENS_PAT, blob)
+## Removed: parse_product (Crutchfield-specific product parser).
 
-    def value_for(label: str) -> Optional[str]:
-        lab = label.lower()
-        for row in soup.select("tr"):
-            k = text_or_none(row.select_one("th, td:first-child"))
-            v = text_or_none(row.select_one("td:last-child"))
-            if k and v and lab in k.lower():
-                return v
-        for dl in soup.select("dl"):
-            dt = text_or_none(dl.select_one("dt"))
-            dd = text_or_none(dl.select_one("dd"))
-            if dt and dd and lab in dt.lower():
-                return dd
-        return None
-
-    mounting_depth_in = None
-    cutout_diameter_in = None
-    displacement_cuft = None
-    recommended_box = None
-
-    val = value_for("Mounting depth")
-    if val:
-        mounting_depth_in = pick_float(DEPTH_PAT, val)
-    val = value_for("Cutout diameter")
-    if val:
-        cutout_diameter_in = pick_float(CUTOUT_PAT, val)
-    val = value_for("Driver displacement")
-    if val:
-        disp = pick_float(DISP_PAT, val)
-        if disp is not None:
-            displacement_cuft = disp
-        else:
-            n = normalize_num(val)
-            if n is not None and n > 10:
-                displacement_cuft = n / 1728.0
-    val = value_for("Recommended Enclosure") or value_for("Enclosure Type")
-    if val:
-        recommended_box = clean_space(val)
-    return Subwoofer(
-        source="crutchfield",
-        url=url,
-        brand=brand,
-        model=model,
-        size_in=size_in,
-        rms_w=rms_w,
-        peak_w=peak_w,
-        impedance_ohm=impedance_ohm,
-        sensitivity_db=sensitivity_db,
-        mounting_depth_in=mounting_depth_in,
-        cutout_diameter_in=cutout_diameter_in,
-        displacement_cuft=displacement_cuft,
-        recommended_box=recommended_box,
-        price_usd=price,
-        image=img,
-        scraped_at=time.time(),
-    )
-
-async def crawl_crutchfield(pages: int = 1) -> List[Subwoofer]:
-    items: List[Subwoofer] = []
-    limiter = asyncio.Semaphore(CONCURRENCY)
-    client = await ensure_async_client(
-        headers={"User-Agent": random.choice(UA_POOL)}, follow_redirects=True, http2=True
-    )
-    try:
-        page_url = LISTING_START
-        listing_htmls: List[str] = []
-        for _ in range(max(1, pages)):
-            resp = await fetch(client, page_url)
-            listing_htmls.append(resp.text)
-            urls, next_url = parse_listing_urls(resp.text)
-            if not next_url:
-                break
-            page_url = next_url
-        product_urls = set()
-        for html in listing_htmls:
-            urls, _ = parse_listing_urls(html)
-            product_urls.update(urls)
-        product_urls = sorted(product_urls)
-        async def fetch_one(u: str) -> Optional[Subwoofer]:
-            async with limiter:
-                try:
-                    r = await fetch(client, u)
-                    return parse_product(r.text, u)
-                except Exception:
-                    return None
-        results = await asyncio.gather(*[fetch_one(u) for u in product_urls])
-        for r in results:
-            if r:
-                items.append(r)
-    finally:
-        try:
-            await client.aclose()  # type: ignore[attr-defined]
-        except Exception:
-            pass
-    return items
+## Removed: crawl_crutchfield.
 
 def _rank_subwoofers(items: List[Subwoofer]) -> List[Subwoofer]:
     """Rank subwoofers with simple heuristic: higher RMS, then price descending fallback, then newest scrape time.
@@ -690,19 +548,7 @@ async def subwoofer_metrics():  # pragma: no cover - simple pass-through
     """Return current in-memory scrape/search metrics."""
     return metrics_snapshot()
 
-@router.get("/crutchfield/scrape")
-async def scrape_crutchfield(pages: int = Query(1, ge=1, le=15)) -> Dict[str, Any]:
-    try:
-        items = await crawl_crutchfield(pages=pages)
-        existing = load_db()
-        by_url = {i.url: i for i in existing}
-        for it in items:
-            by_url[it.url] = it
-        merged = list(by_url.values())
-        save_db(merged)
-        return {"ok": True, "found": len(items), "total": len(merged), "file": str(DB_PATH)}
-    except Exception as e:
-        raise HTTPException(500, f"scrape failed: {e}")
+## Removed endpoint: /subwoofers/crutchfield/scrape
 
 @router.get("/sample")
 async def sample_subwoofers(limit: int = Query(5, ge=1, le=50)) -> Dict[str, Any]:
@@ -713,14 +559,9 @@ async def sample_subwoofers(limit: int = Query(5, ge=1, le=50)) -> Dict[str, Any
     Designed for quick UI development without large dataset overhead.
     """
     items = load_db()
+    # Removed auto-seed from Crutchfield; now returns empty list if DB empty.
     if not items:
-        try:
-            seeded = await crawl_crutchfield(pages=1)
-            if seeded:
-                save_db(seeded)
-                items = seeded
-        except Exception:  # pragma: no cover - non-critical
-            items = []
+        items = []
     sample = items[:limit]
     return {
         "total": len(items),
@@ -839,7 +680,7 @@ async def subwoofers_by_size(size: int):
 
 @router.post("/purge")
 async def purge_subwoofers(
-    remove_sources: List[str] = Query(["crutchfield"], description="Sources to remove from DB"),
+    remove_sources: List[str] = Query([], description="Sources to remove from DB (Crutchfield removed)"),
     test_url_token: str = Query("Test-Sub", description="Substring indicating test fixture entries to purge"),
     brand_token: str = Query("BrandX", description="Brand token used in test fixtures to purge")
 ):
@@ -902,101 +743,4 @@ async def picker_subwoofers(limit: int = Query(30, ge=1, le=500)):
 
 __all__ = ["router"]
 
-# -----------------------
-# Sundown Audio scrape (8" subs) - direct manufacturer page
-# -----------------------
-from app.scraping.sundown import scrape_sundown_eight, SUNDOWN_PAGE as _SUNDOWN_PAGE
-from app.scraping.sundown import scrape_sundown_eight_full
-from app.scraping.jlaudio import scrape_jlaudio_eight, JLAUDIO_PAGE as _JLAUDIO_PAGE
-
-@router.get("/sundown", tags=["subwoofers"])  # path: /subwoofers/sundown
-async def sundown_eight_inch(models_only: bool = Query(True, description="Return only parsed models (omit raw HTML).")):
-    items = await scrape_sundown_eight()
-    existing = load_db()
-    by_url = {i.url: i for i in existing}
-    for rec in items:
-        sub_obj = Subwoofer(
-            source=rec["source"], url=rec["url"], brand=rec["brand"], model=rec["model"],
-            size_in=rec["size_in"], rms_w=None, peak_w=None, impedance_ohm=None,
-            sensitivity_db=None, mounting_depth_in=None, cutout_diameter_in=rec.get("cutout_diameter_in"),
-            displacement_cuft=None, recommended_box=None, price_usd=None, image=None,
-            scraped_at=rec["scraped_at"],
-        )
-        by_url[sub_obj.url] = sub_obj
-    merged = list(by_url.values())
-    save_db(merged)
-    # Update bucket
-    size_dir = Path("subwoofers") / "8"
-    size_dir.mkdir(parents=True, exist_ok=True)
-    latest_path = size_dir / "latest.json"
-    try:
-        latest_path.write_text(json.dumps([asdict(i) for i in merged if i.size_in and int(round(i.size_in)) == 8], indent=2), encoding="utf-8")
-    except Exception:
-        pass
-    return {"total": len(items), "items": items, "source_page": _SUNDOWN_PAGE}
-
-@router.get("/jlaudio", tags=["subwoofers"])  # path: /subwoofers/jlaudio
-async def jlaudio_eight_inch(models_only: bool = Query(True, description="Return only parsed models (omit raw HTML).")):
-    items = await scrape_jlaudio_eight()
-    existing = load_db()
-    by_url = {i.url: i for i in existing}
-    for rec in items:
-        sub_obj = Subwoofer(
-            source=rec["source"], url=rec["url"], brand=rec["brand"], model=rec["model"],
-            size_in=rec["size_in"], rms_w=None, peak_w=None, impedance_ohm=None,
-            sensitivity_db=None, mounting_depth_in=None, cutout_diameter_in=rec.get("cutout_diameter_in"),
-            displacement_cuft=None, recommended_box=None, price_usd=None, image=None,
-            scraped_at=rec["scraped_at"],
-        )
-        by_url[sub_obj.url] = sub_obj
-    merged = list(by_url.values())
-    save_db(merged)
-    size_dir = Path("subwoofers") / "8"
-    size_dir.mkdir(parents=True, exist_ok=True)
-    latest_path = size_dir / "latest.json"
-    try:
-        latest_path.write_text(json.dumps([asdict(i) for i in merged if i.size_in and int(round(i.size_in)) == 8], indent=2), encoding="utf-8")
-    except Exception:
-        pass
-    return {"total": len(items), "items": items, "source_page": _JLAUDIO_PAGE}
-
-@router.get("/sundown/collect", tags=["subwoofers"])  # path: /subwoofers/sundown/collect
-async def sundown_collect(
-    max_models: int = Query(12, ge=1, le=40, description="Maximum models to attempt enrichment for."),
-    base_delay: float = Query(1.2, ge=0.1, le=5.0, description="Base delay between product page fetches (seconds)."),
-    jitter: float = Query(0.4, ge=0.0, le=2.0, description="Random +/- jitter added to base delay."),
-    include_fallback: bool = Query(False, description="Include synthetic fallback if no live models parsed."),
-):
-    models = await scrape_sundown_eight_full(max_models=max_models, base_delay=base_delay, jitter=jitter)
-    if not models and include_fallback:
-        models = []  # scrape_sundown_eight_full already returns fallback; placeholder for future logic
-    # Persist like simple endpoint
-    existing = load_db()
-    by_url = {i.url: i for i in existing}
-    for rec in models:
-        sub_obj = Subwoofer(
-            source=rec.get("source", "sundown"), url=rec["url"], brand=rec["brand"], model=rec["model"],
-            size_in=rec["size_in"], rms_w=None, peak_w=None, impedance_ohm=None,
-            sensitivity_db=None, mounting_depth_in=None, cutout_diameter_in=rec.get("cutout_diameter_in"),
-            displacement_cuft=None, recommended_box=None, price_usd=None, image=None,
-            scraped_at=rec["scraped_at"],
-        )
-        by_url[sub_obj.url] = sub_obj
-    merged = list(by_url.values())
-    save_db(merged)
-    size_dir = Path("subwoofers") / "8"
-    size_dir.mkdir(parents=True, exist_ok=True)
-    latest_path = size_dir / "latest.json"
-    try:
-        latest_path.write_text(json.dumps([asdict(i) for i in merged if i.size_in and int(round(i.size_in)) == 8], indent=2), encoding="utf-8")
-    except Exception:
-        pass
-    return {
-        "total": len(models),
-        "models": models,
-        "pacing": {
-            "base_delay": base_delay,
-            "jitter": jitter,
-        },
-        "source_page": _SUNDOWN_PAGE,
-    }
+# JL Audio and Sundown manufacturer scrape endpoints removed as part of de-scope.

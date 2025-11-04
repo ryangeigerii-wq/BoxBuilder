@@ -4,7 +4,6 @@ from .box import router as box_router
 from .subwoofers import router as subwoofers_router
 from .ports import router as ports_router
 from .export import router as export_router
-from .crutchfield import router as crutchfield_router
 from .sonic import router as sonic_router
 from .presets import router as presets_router
 
@@ -14,7 +13,6 @@ api_router.include_router(box_router)
 api_router.include_router(subwoofers_router)
 api_router.include_router(ports_router)
 api_router.include_router(export_router)
-api_router.include_router(crutchfield_router)
 api_router.include_router(sonic_router)
 api_router.include_router(presets_router)
 

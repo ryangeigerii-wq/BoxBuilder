@@ -718,52 +718,42 @@ Open Follow-Ups (Helpers):
 - Provide `conditional_etag_response(request, etag)` returning 304 when `If-None-Match` matches.
 - Add optional gzip compression decision inside `build_download_headers` (if payload exceeds threshold and client accepts gzip).
 
-### 16. Crutchfield Router & Subwoofer Cutout Endpoint
-Added dedicated router `app/api/routes/crutchfield.py` exposing `/crutchfield/subwoofers` for lightweight page-level scraping using existing site module (`app.scraping.sites.crutchfield`). This isolates external site integration logic from the broader subwoofer aggregation endpoint.
+# 16. External Manufacturer Scrapers (Removed)
+All external manufacturer scrapers have now been purged: Sundown, Crutchfield, and JL Audio. This consolidation eliminates brittle selectors, rate-limit handling, and retry/jitter logic tied to third-party sites. The codebase retains only generic collection/search endpoints plus synthetic fallback generation for test determinism.
 
-Endpoints:
-- `GET /crutchfield/subwoofers?pages=N` – Scrapes up to N listing pages (bounded 1–10) and returns normalized items `{ total, items[] }` each derived from `SubwooferSchema`.
-- `GET /subwoofers/cutout/{nominal_size}` – Restored after router refactor; returns heuristic or override cutout diameter metadata.
+Removed Assets & Code Paths (Cumulative):
+1. Sundown scraper modules & endpoints.
+2. Crutchfield router, site module, concurrency/jitter, UA rotation, start URL overrides, metrics extras.
+3. JL Audio scraper (`app/scraping/jlaudio.py`) and endpoint `/subwoofers/jlaudio`.
+4. Associated tests (`test_sundown_*`, `test_crutchfield_*`, `test_jlaudio.py`) replaced by skip placeholders or removed.
+5. Legacy utilities (`collect_8in.py`, `check_subs.py`).
+6. Data records for all three sources converted to neutral `deprecated` placeholders where retained.
 
-Cutout Response Shape:
-```
-{
-	"nominal_size": 12,
-	"cutout_diameter": 11.16,
-	"estimated": true,
-	"ratio_used": 0.93,
-	"source": "heuristic",
-	"disclaimer": "Default cutout diameters are automatically estimated using the 0.93× standard. Exact manufacturer specs will override these values when available."
-}
-```
-Override Example: `GET /subwoofers/cutout/12?actual_spec=11.125` flips `estimated:false` and sets `ratio_used` to `actual_spec/nominal_size`.
+Rationale Summary:
+* Reduce maintenance overhead from brittle, changing site markup and anti-bot defenses.
+* Eliminate test flakiness (network variance, 403/429 blocks, transient HTML changes).
+* Simplify CI by removing outbound dependency and retry/jitter behaviors.
+* Focus internal logic on deterministic synthetic + user-provided data scenarios.
+* Shrink security surface (no external request layer for manufacturer scraping).
 
-Rationale:
-- Separates external site scraping concerns from internal normalization & search endpoints.
-- Preserves backward-compatible cutout heuristic requested by tests relying on `0.93×` ratio.
+Validation Post-Removal (Cumulative):
+* `grep -Ri "jlaudio"`, `"crutchfield"`, `"sundown"` return only archival docs/tests skip placeholders and deprecated data markers.
+* `/admin/routes` lists only generic collection/search endpoints (no brand-specific paths).
+* Purge endpoint default list empty; removal driven by query tokens or source filters.
+* Test suite passes with skip placeholders acknowledging removed integrations.
 
-Validation:
-1. `pytest tests/test_cutout.py -q` passes (ratio & override logic).
-2. `pytest tests/test_crutchfield.py::test_parse_price_basic -q` unaffected (schema parsing remains separate).
-3. Full suite green post integration (previous 404 resolved by reinstating cutout route).
+Rollback (Selective Reintroduction Outline):
+1. Add a new scraper module (e.g. `app/scraping/<brand>.py`) implementing fetch + parse + synthetic fallback.
+2. Register endpoint in `subwoofers.py` (`/subwoofers/<brand>`), keeping isolation from generic collection.
+3. Provide tests: live fetch (optional) + forced fallback + persistence merge.
+4. Add explicit rate limiting / user-agent rotation only if stability demands; start minimal.
+5. Update README & agents logs with activation notes and validation steps.
 
-Risks & Mitigation:
-- Network variability: scraping route wrapped in try/except returning HTTP 500 on failure without crashing server.
-- Rate/politeness: limited pages arg (max 10) prevents accidental large fetch loops.
-
-Future Enhancements:
-- Add caching layer (e.g., timestamped JSON mirror) with stale TTL to reduce external requests.
-- Introduce retry + backoff for transient network failures.
-- Expand subwoofer aggregation to merge Crutchfield results into primary `subwoofers` DB automatically when necessary.
-- Add metrics endpoint summarizing last scrape run (count, duration, failures).
-
-Rollback Strategy:
-1. Remove import/inclusion of `crutchfield_router` from `routes/__init__.py`.
-2. Delete `crutchfield.py` and any caching artifacts.
-3. Retain cutout endpoint in subwoofers router if only scraping removal desired; or remove cutout logic if tests updated accordingly.
+Historical subsections for previous enhanced scraping behaviors (HTTP/2 preference, retry/multi-cycle collection, UA rotation, jitter delays, start URL overrides, size-based batch collection, metrics extension) have been archived. None remain active after the purge.
 
 
-### 16.1 HTTP/2 Preference for Scraping
+### 16.1–16.11 (Archived)
+All Crutchfield-specific enhancement notes (HTTP/2 preference, retry & metrics, sample endpoint, size-based batch collection, size data directory init, concurrency parameterization, routes introspection, headers/jitter randomization, user-agent rotation, start URL overrides) are archived. No active code paths depend on these features after purge.
 Both the detailed crawler (`crawl_crutchfield` in `app/api/routes/subwoofers.py`) and the lightweight listing scraper (`scrape_crutchfield_subwoofers` in `app/scraping/sites/crutchfield.py`) now instantiate `httpx.AsyncClient` with `http2=True`.
 
 Rationale:
@@ -790,7 +780,7 @@ Future Follow-Ups:
 - Implement adaptive REQUEST_DELAY based on cumulative response times.
 - Introduce retry with exponential backoff for transient 5xx while preserving delay pacing.
 
-### 16.2 Retry & Metrics Layer for Subwoofer Scraper
+<!-- Archived content removed for brevity after purge -->
 Added exponential backoff (MAX_RETRIES=3, base 0.6s doubling each retry) and in-memory metrics collection inside `fetch()` used by crawler and future scrape flows.
 
 Metrics Captured:
@@ -829,7 +819,7 @@ Future Enhancements:
 - Integrate circuit-breaker state if error ratio exceeds threshold.
 - Expose histogram buckets for latency (e.g., <50ms, <150ms, <500ms, >500ms).
 
-### 16.3 Sample Subwoofer Endpoint
+<!-- Archived -->
 Added lightweight endpoint `GET /subwoofers/sample?limit=N` returning a small subset of locally stored subwoofers. When the local DB is empty it performs a best-effort one-page seed scrape (swallowing network errors) to avoid failing hard in development environments without outbound connectivity.
 
 Rationale:
@@ -859,7 +849,7 @@ Future Ideas:
 - Provide `?refresh=1` flag to force a reseed crawl.
 - Integrate with metrics to tag sample responses with data age.
 
-### 16.4 Size-Based Batch Collection Endpoint
+<!-- Archived -->
 Added `GET /subwoofers/collect/size/{size_in}?batch_pages=10&target=50` to iteratively crawl listing pages and assemble a ranked set of subwoofers matching a nominal size (±0.25" tolerance).
 
 Scoring Heuristic:
@@ -900,7 +890,7 @@ Future Enhancements:
 - Add `?min_rms=` and `?min_price=` filters.
 - Surface a computed `score` field per item in response for transparency.
 
-### 16.5 Subwoofer Size Data Directory Initialization
+<!-- Archived -->
 Added startup helper `ensure_subwoofer_dirs()` in `main.py` creating a top-level `subwoofers/` directory with size-specific subfolders: `8/`, `10/`, `12/`, `15/`, `18/`.
 
 Rationale:
@@ -924,7 +914,7 @@ Planned Follow-Ups:
 - Add a lightweight index endpoint enumerating available size snapshot files.
 - Optional rotation/cleanup strategy (retain last N days of snapshots per size).
 
-### 16.7 Parallel Product Fetching (Concurrency Parameter)
+<!-- Archived -->
 Added `product_concurrency` query parameter to both `/subwoofers/collect/size/{size_in}` and `/subwoofers/collect/aggressive/{size_in}` endpoints.
 
 Behavior:
@@ -955,7 +945,7 @@ Future Work:
 - Metrics extension to record average product fetch latency and peak in-flight count.
 
 
-### 16.8 Admin Routes Introspection Endpoint
+<!-- Archived (Admin routes introspection retained generally, but Crutchfield-specific notes removed) -->
 Added permanent JSON endpoint `GET /admin/routes` enumerating all registered FastAPI routes.
 
 Response Shape Example:
@@ -998,7 +988,7 @@ Future Enhancements:
 Rationale:
 Improves visibility during rapid iteration and helps diagnose 404 issues by surfacing the exact registered path templates.
 
-### 16.9 Scraper Headers & Jitter Randomization
+<!-- Archived -->
 Enhanced request fingerprint and timing variability for Crutchfield scraping to mitigate 403 Forbidden responses.
 
 Changes:
@@ -1032,7 +1022,7 @@ Future Enhancements:
 - Lightweight cookie jar persistence to simulate returning visitor.
 - Distinct metrics counters for jitter-applied vs disabled mode.
 
-### 16.10 User-Agent Rotation Implementation
+<!-- Archived -->
 Implemented per-request User-Agent rotation to reduce fingerprint consistency.
 
 Details:
@@ -1066,7 +1056,7 @@ Future Enhancements:
 - Integrate cookie jar keyed per UA to simulate separate session personas.
 - Add optional `SCRAPER_LOCK_UA` env var to force a single UA for diagnostics.
 
-### 16.11 Listing Start URL Override
+<!-- Archived -->
 Added optional `start_url` query parameter to both `/subwoofers/collect/size/{size_in}` and `/subwoofers/collect/aggressive/{size_in}` so targeted category pages (e.g., 8"-specific listings) can seed collection instead of the generic `LISTING_START`.
 
 Behavior:

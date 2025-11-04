@@ -18,7 +18,7 @@
             <a href="/docs">API Docs</a>
             <a href="/health">Health</a>
             <a href="/boxes/create-box">Default Box JSON</a>
-            <a href="/subwoofers/crutchfield?pages=1">Crutchfield Subs</a>
+            <!-- Legacy external scrapers removed -->
         </nav>
     </header>
 
@@ -72,9 +72,9 @@
                 </div>
                 <div class="panel" id="maintenance-panel">
                     <h3>Maintenance</h3>
-                    <p class="mini-desc">One-click purge of test / legacy Crutchfield records.</p>
+                    <p class="mini-desc">One-click purge of test / deprecated records.</p>
                     <button type="button" id="purge-btn" class="button danger" style="margin-bottom:.5rem;">Purge Test &
-                        Crutchfield Data</button>
+                        Deprecated Data</button>
                     <div id="purge-result" style="font-size:.7rem;opacity:.85;min-height:1.2rem;"></div>
                     <hr style="margin:.75rem 0;" />
                     <h4 style="margin:0 0 .35rem;font-size:.8rem;">Workspace (Legacy)</h4>
@@ -90,8 +90,8 @@
                             </div>
                             <div class="folder">
                                 <h3>Subwoofer Data</h3>
-                                <p>Scraped specs sources.</p><a href="/subwoofers/crutchfield?pages=1"
-                                    class="mini-link">Fetch subs</a>
+                                <p>Scraped specs sources (external integrations removed).</p><span class="mini-link"
+                                    style="opacity:.55;cursor:not-allowed;">(External Scrapers Removed)</span>
                             </div>
                             <div class="folder">
                                 <h3>Saved Designs</h3>
@@ -227,7 +227,7 @@
             }
             // Purge
             async function doPurge() {
-                if (!window.confirm('Purge all test & Crutchfield data? This cannot be undone.')) return;
+                if (!window.confirm('Purge all test & legacy external scraper data? This cannot be undone.')) return;
                 const resBox = document.getElementById('purge-result');
                 resBox.innerHTML = '<span class="spinner" aria-hidden="true"></span> <span class="loading-badge">Purging…</span>';
                 try {

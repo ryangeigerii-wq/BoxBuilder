@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" font-family="Arial" font-size="12">
+<defs><style>.panel{fill:#eee;stroke:#333;stroke-width:1} .sheet{fill:none;stroke:#000;stroke-width:2} .label{fill:#000}</style></defs>
+<text x="10" y="20" class="label">Sheets: 1 Utilization: 22.4% Kerf: 0.125 in</text>
+<g id="sheet1" transform="translate(0.0,40.0)">
+<rect class="sheet" x="0" y="0" width="960.0" height="480.0" />
+<text class="label" x="4" y="-8">Sheet 1 (96x48 in)</text>
+<rect class="panel" x="0.0" y="0.0" width="180.0" height="120.0" />
+<text class="label" x="2.0" y="14.0">Front 18.00x12.00</text>
+<rect class="panel" x="181.2" y="0.0" width="180.0" height="120.0" />
+<text class="label" x="183.2" y="14.0">Back 18.00x12.00</text>
+<rect class="panel" x="0.0" y="121.2" width="180.0" height="100.0" />
+<text class="label" x="2.0" y="135.2">Top 18.00x10.00</text>
+<rect class="panel" x="362.5" y="0.0" width="180.0" height="100.0" />
+<text class="label" x="364.5" y="14.0">Bottom 18.00x10.00</text>
+<rect class="panel" x="181.2" y="121.2" width="120.0" height="100.0" />
+<text class="label" x="183.2" y="135.2">Left 12.00x10.00 R</text>
+<rect class="panel" x="0.0" y="222.5" width="100.0" height="120.0" />
+<text class="label" x="2.0" y="236.5">Right 10.00x12.00</text>
+</g>
+</svg>

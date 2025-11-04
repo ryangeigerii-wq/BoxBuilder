@@ -1,0 +1,12 @@
+title: BoxBuilder
+description: Deterministic subwoofer box designer
+baseurl: ""
+url: "https://<your-gh-username>.github.io/BoxBuilder"
+theme: minima
+markdown: kramdown
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+exclude:
+  - Gemfile
+  - Gemfile.lock

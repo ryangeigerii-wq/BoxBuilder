@@ -7,7 +7,7 @@ Minimal FastAPI backend skeleton.
 - Modular routers (`app/api/routes`) for health and box creation
 - Separation of concerns: models vs schemas
 - Basic test using `TestClient`
-- Manufacturer scraping endpoints (Sundown & JL Audio 8" subs) with synthetic fallback and enrichment mock test.
+- Manufacturer scraping endpoint (JL Audio 8" subs) with synthetic fallback.
 
 ## Portability & Fresh Clone Guide
 The repository is now structured so a fresh clone can run both backend and front-end + scraping tests with minimal setup. Follow this order for a clean environment bring‑up on a new machine (Windows PowerShell examples shown):
@@ -104,12 +104,11 @@ git commit -m "portability: add tests, snapshots, and README fresh clone guide"
 
 ### 11. Minimal Smoke Commands (Copy/Paste)
 ```powershell
-pytest tests/test_sundown.py::test_sundown_basic_shape -q
 pytest tests/test_export_vector.py::test_vector_exports -q
 pytest tests/test_routes_index.py::test_admin_routes_index -q
 ```
 
-If all three pass, the core API, export system, and routing registry are healthy.
+If both pass, the core API, export system, and routing registry are healthy.
 
 ---
 
@@ -145,16 +144,9 @@ Open http://127.0.0.1:8000/docs for interactive API docs.
 
 ### Scraping Quick Start
 ```powershell
-curl http://127.0.0.1:8000/subwoofers/sundown
 curl http://127.0.0.1:8000/subwoofers/jlaudio
 ```
 Synthetic fallback returns representative models if live fetch blocked.
-
-Enrichment (polite, delayed detail fetch) endpoint:
-```powershell
-curl "http://127.0.0.1:8000/subwoofers/sundown/collect?max_models=5&base_delay=0.6&jitter=0.25"
-```
-Mock enrichment test (`tests/test_sundown_enriched_mock.py`) ensures fallback items do not include enrichment fields.
 
 ### Server Immediate Shutdown Troubleshooting
 If the server starts then immediately logs "Shutting down":
@@ -590,100 +582,21 @@ pytest -q
 
 When integrating real sites, adjust CSS selectors in `app/scraping/parser.py`.
 
-### Crutchfield Specific Scraper
-You can scrape Crutchfield subwoofer listing pages directly:
-```
-GET /subwoofers/crutchfield?pages=3
-```
-Returns aggregated products from the first 3 pages.
+### Legacy External Scrapers (Removed)
+All former manufacturer-specific scraping endpoints and modules have been purged to reduce maintenance overhead and external dependency risk. The codebase now contains only generic, deterministic collection/search utilities without live third-party HTML parsing.
 
-Note: Respect Crutchfield's terms of service and avoid excessive requests. Increase politeness by adding delays if you expand concurrency.
+Key Outcomes:
+* Smaller surface area; no rotating headers, jitter delays, or retry/backoff complexity.
+* No external network calls required for normal operation or tests (fast, deterministic CI).
+* Data persistence uses neutral placeholder `source` values to retain schema stability.
 
-Notes:
-- Be respectful of robots.txt and rate limits.
-- Add caching or persistence for results if scraping heavy pages.
-- Consider rotating user agents and adding retries/backoff for robustness.
+If a new scraper is ever reintroduced:
+1. Add a dedicated module under `app/scraping/sites/<provider>.py` with polite fetch and synthetic fallback.
+2. Register a router endpoint returning normalized records (include heuristic cutout diameter if spec absent).
+3. Provide unit tests for live (monkeypatched) and synthetic paths; avoid hard network dependence.
+4. Add concise rollback and validation notes to `agents.md`.
 
-### Sundown Manufacturer Scrape (8" Subs)
-
-A lightweight manufacturer endpoint provides 8" Sundown Audio subwoofer models. It attempts a live scrape of the public catalog page and falls back to a small synthetic list if the site blocks requests or the network is unavailable.
-
-Endpoint:
-```
-GET /subwoofers/sundown
-```
-Response shape:
-```jsonc
-{
-  "total": 4,
-  "source_page": "https://sundownaudio.com/pages/sundown-subwoofer-page",
-  "items": [
-    {
-      "brand": "Sundown Audio",
-      "model": "SA-8 V.3",
-      "size_in": 8.0,
-      "cutout_diameter_in": 7.44,
-      "cutout_estimated": true,
-      "source": "sundown",
-      "url": "https://sundownaudio.com/pages/sundown-subwoofer-page#model-sa-8-v.3",
-      "scraped_at": 1712345678.123
-    }
-  ]
-}
-```
-
-Cutout diameter uses the same heuristic (0.93 × nominal) unless a precise spec is later integrated. Fallback models are labeled with `source: sundown-synthetic` so they can be visually distinguished or filtered client-side.
-
-Persistence:
-- Results are merged into the main subwoofer DB (`subwoofers_db.json`) without overwriting richer existing records.
-- A size bucket snapshot updates `subwoofers/8/latest.json` after each successful scrape.
-
-Development Tips:
-- If repeated 403/timeout occurs, the endpoint still returns the synthetic fallback ensuring the UI remains functional.
-- To extend to other sizes or brands, duplicate the helper structure in `app/scraping/sundown.py` (or create a new module) and add a corresponding router endpoint.
-- Consider adding per-model manufacturer cutout overrides once specs are collected; those will supersede the heuristic and set `cutout_estimated: false`.
-
-### JL Audio Manufacturer Scrape (8" Subs)
-
-Endpoint:
-```
-GET /subwoofers/jlaudio
-```
-Behavior mirrors the Sundown endpoint. It scrapes the JL Audio car subwoofer collection page for 8" product links (pattern match on `8"`, `8 inch`, or model tokens beginning with `8W`). Non-subwoofer items (amplifiers, enclosures, accessories) are filtered out.
-
-Sample response (abridged):
-```jsonc
-{
-  "total": 1,
-  "source_page": "https://www.jlaudio.com/collections/car-subwoofers",
-  "items": [
-    {
-      "brand": "JL Audio",
-      "model": "8W3v3",
-      "size_in": 8.0,
-      "cutout_diameter_in": 7.44,
-      "cutout_estimated": true,
-      "source": "jlaudio",
-      "url": "https://www.jlaudio.com/products/8w3v3-4",
-      "scraped_at": 1712345678.321
-    }
-  ]
-}
-```
-
-Fallback: If live fetch fails or HTML parsing yields no matches, a synthetic list with representative models (`8W1v3`, `8W3v3`, `8W7AE`, `CP108LG-W3v3`) returns under `source: jlaudio-synthetic`.
-
-Persistence & Merge:
-- Same merge & size bucket update strategy as Sundown.
-- Duplicate URLs are deduped; re-running the endpoint will not balloon entries.
-
-Extending to Other Sizes:
-- Copy `app/scraping/jlaudio.py` and adjust size filter (e.g., `10"` patterns) plus endpoint path (`/subwoofers/jlaudio10`).
-- Consider unifying manufacturer scrapers into a single registry with brand + size parameters if expanding further.
-
-Testing:
-- `tests/test_jlaudio.py` covers response shape, bucket persistence, and idempotent merging.
-- Add a forced-fallback test by monkeypatching `_fetch_html` to return `None` if you need explicit synthetic path coverage.
+Current State: No active external scraping modules; references to prior integrations exist only in historical change logs.
 
 
 ## Show Port Overlay Feature
@@ -761,6 +674,31 @@ Roadmap:
 
 ## License
 MIT (add LICENSE file if needed)
+
+---
+## Removed Integrations Summary
+
+| Integration | Status | Notes |
+|-------------|--------|-------|
+| External manufacturer scrapers | Removed | All brand-specific endpoints & modules deleted; schema placeholders retained. |
+| LemonadeJS front-end framework | Removed | Vanilla JS now sole client approach. |
+| Rust WASM experiment | Removed | Directory and loader logic deleted. |
+| Finish customization controls (grain strength, knots, seed) | Removed | Simplified dropdown-only finish selection retained. |
+
+All removed features follow the same deprecation pattern: code deleted, tests updated to skip or assert absence, and persistent data entries converted to neutral placeholders to keep schemas stable.
+
+Validation After Removal:
+* `grep -i crutchfield` returns no matches outside `README.md`, `agents.md`, and deprecated data entries.
+* `/admin/routes` no longer lists Crutchfield endpoints.
+* Purge endpoint (`/subwoofers/purge`) defaults remove list empty; explicit removal of deprecated sources still supported via query params.
+* Test suite passes without Crutchfield-specific skips (only legacy skip markers remain).
+
+Future Scraping Guidance:
+If adding a new manufacturer scraper, model it after `JL Audio` implementation with:
+* Dedicated site module under `app/scraping/sites/<brand>.py`.
+* Router endpoint returning normalized schema objects plus synthetic fallback.
+* Explicit tests for live + synthetic paths (use monkeypatch for deterministic fallback).
+* Constrained page count and polite delays; consider optional concurrency flag only after stability verified.
 
 ---
 

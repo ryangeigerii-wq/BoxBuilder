@@ -1,0 +1,38 @@
+[
+  {
+    "source": "sonic",
+    "url": "https://sonic.example/item-1",
+    "brand": "CleanBrand",
+    "model": "Alpha10",
+    "size_in": 10.0,
+    "rms_w": 600,
+    "peak_w": null,
+    "impedance_ohm": null,
+    "sensitivity_db": null,
+    "mounting_depth_in": null,
+    "cutout_diameter_in": null,
+    "displacement_cuft": null,
+    "recommended_box": null,
+    "price_usd": 199.0,
+    "image": null,
+    "scraped_at": 123457.0
+  },
+  {
+    "source": "sonic",
+    "url": "https://sonic.example/item-2",
+    "brand": "CleanBrand",
+    "model": "Beta8",
+    "size_in": 8.0,
+    "rms_w": 350,
+    "peak_w": null,
+    "impedance_ohm": null,
+    "sensitivity_db": null,
+    "mounting_depth_in": null,
+    "cutout_diameter_in": null,
+    "displacement_cuft": null,
+    "recommended_box": null,
+    "price_usd": 129.0,
+    "image": null,
+    "scraped_at": 123458.0
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "brand": "Sundown Audio",
+    "model": "Z8",
+    "size_in": 8.0,
+    "cutout_diameter_in": 7.44,
+    "cutout_estimated": true,
+    "source": "sundown",
+    "url": "https://sundownaudio.com/products/z8-8-subwoofer",
+    "scraped_at": 1762223423.252064,
+    "detail_fetch": true,
+    "has_rms": true,
+    "has_mount": true,
+    "has_price": true,
+    "page_chars": 64,
+    "enriched_at": 1234567890.0
+  },
+  {
+    "brand": "Sundown Audio",
+    "model": "SA-8 V.3",
+    "size_in": 8.0,
+    "cutout_diameter_in": 7.44,
+    "cutout_estimated": true,
+    "source": "sundown",
+    "url": "https://sundownaudio.com/products/sa-8-v3-8-subwoofer",
+    "scraped_at": 1762223423.252064,
+    "detail_fetch": true,
+    "has_rms": true,
+    "has_mount": true,
+    "has_price": true,
+    "page_chars": 64,
+    "enriched_at": 1234567890.0
+  }
+]

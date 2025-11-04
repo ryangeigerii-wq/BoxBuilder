@@ -12,8 +12,8 @@ def test_admin_routes_index(client):
         "/subwoofers",  # listing/search
         "/subwoofers/collect/size/{size_in}",
         "/subwoofers/collect/aggressive/{size_in}",
-        "/crutchfield/subwoofers",
         "/admin/routes",
+        # NOTE: Manufacturer-specific routes (JL Audio, Sundown, Crutchfield) removed.
     ]
     for p in expected:
         assert p in paths, f"Missing expected route {p} in /admin/routes index"
