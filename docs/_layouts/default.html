@@ -5,6 +5,11 @@
     <meta charset="UTF-8" />
     <title>{{ page.title }} | {{ site.title }}</title>
     {%- seo -%}
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/svg+xml" href="{{ '/assets/img/favicon.svg' | relative_url }}">
+    <link rel="alternate icon" href="{{ '/assets/img/favicon.svg' | relative_url }}">
+    <meta name="theme-color" content="#155e90" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" href="https://unpkg.com/modern-css-reset/dist/reset.min.css" />
     <style>
         body {
@@ -62,11 +67,14 @@
 
 <body>
     <header>
-        <h1>{{ site.title }}</h1>
+        <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;">
+            <img src="{{ site.logo | default: '/assets/img/logo.svg' | relative_url }}" alt="{{ site.title }} logo" style="height:52px;width:auto;image-rendering:-webkit-optimize-contrast;" />
+            <h1 style="margin:0;font-size:2rem;line-height:1;">{{ site.title }}</h1>
+        </div>
         <nav>
             <a href="{{ '/' | relative_url }}">Home</a>
             <a href="{{ '/changelog' | relative_url }}">Changelog</a>
-            <a href="https://github.com/<your-gh-username>/BoxBuilder">Repository</a>
+            <a href="https://github.com/ryangeigerii-wq/BoxBuilder" rel="noopener">Repository</a>
         </nav>
     </header>
     <main>

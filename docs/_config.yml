@@ -1,12 +1,21 @@
 title: BoxBuilder
 description: Deterministic subwoofer box designer
-baseurl: ""
-url: "https://<your-gh-username>.github.io/BoxBuilder"
+baseurl: "/BoxBuilder"  # project site under username.github.io/BoxBuilder
+url: "https://ryangeigerii-wq.github.io"  # canonical user/org root
 theme: minima
 markdown: kramdown
+logo: /assets/img/logo.svg
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
 exclude:
   - Gemfile
   - Gemfile.lock
+  - node_modules
+
+# SEO tag hints
+lang: en
+author: ryangeigerii-wq
+
+# Build settings
+future: true
