@@ -33,7 +33,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -51,7 +51,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -69,7 +69,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -87,7 +87,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -105,7 +105,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -123,7 +123,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -141,7 +141,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -159,7 +159,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -177,7 +177,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "synthetic",
@@ -195,7 +195,7 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178801.1817298
+    "scraped_at": 1762219945.9628427
   },
   {
     "source": "sundown",
@@ -213,204 +213,6 @@
     "recommended_box": null,
     "price_usd": null,
     "image": null,
-    "scraped_at": 1762178819.5438209
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1234/Test-Sub.html",
-    "brand": "BrandX",
-    "model": "ModelY 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219111.7357278
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1007/Test-Sub-7.html",
-    "brand": "BrandX",
-    "model": "Model7 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.3148384
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1009/Test-Sub-9.html",
-    "brand": "BrandX",
-    "model": "Model9 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.3192859
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1006/Test-Sub-6.html",
-    "brand": "BrandX",
-    "model": "Model6 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.3073325
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1008/Test-Sub-8.html",
-    "brand": "BrandX",
-    "model": "Model8 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.3073325
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1001/Test-Sub-1.html",
-    "brand": "BrandX",
-    "model": "Model1 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.2915733
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1003/Test-Sub-3.html",
-    "brand": "BrandX",
-    "model": "Model3 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.2915733
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1004/Test-Sub-4.html",
-    "brand": "BrandX",
-    "model": "Model4 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.2915733
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1005/Test-Sub-5.html",
-    "brand": "BrandX",
-    "model": "Model5 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.2915733
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1000/Test-Sub-0.html",
-    "brand": "BrandX",
-    "model": "Model0 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.2915733
-  },
-  {
-    "source": "crutchfield",
-    "url": "https://www.crutchfield.com/p_1002/Test-Sub-2.html",
-    "brand": "BrandX",
-    "model": "Model2 8\" Subwoofer",
-    "size_in": 8.0,
-    "rms_w": 300,
-    "peak_w": null,
-    "impedance_ohm": null,
-    "sensitivity_db": null,
-    "mounting_depth_in": null,
-    "cutout_diameter_in": null,
-    "displacement_cuft": null,
-    "recommended_box": null,
-    "price_usd": 199.99,
-    "image": null,
-    "scraped_at": 1762219112.2915733
+    "scraped_at": 1762219960.4796517
   }
 ]

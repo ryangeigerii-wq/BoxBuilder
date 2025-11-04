@@ -4,8 +4,12 @@ import pytest
 # We avoid real network by monkeypatching internal helpers.
 
 def asyncio_run(coro):
+    """Run a coroutine using asyncio.run for Python 3.11+ compatibility.
+    This replaces legacy get_event_loop()/run_until_complete usage which
+    can raise RuntimeError when no loop is set on Windows.
+    """
     import asyncio
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 @pytest.mark.parametrize("scenario", ["enriched", "fallback"])

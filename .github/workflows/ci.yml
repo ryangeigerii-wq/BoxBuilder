@@ -8,6 +8,10 @@ on:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        playw: [none, with]
+        python-version: ["3.11"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -15,11 +19,16 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
           cache: 'pip'
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run tests
+          if [ "${{ matrix.playw }}" = "with" ]; then python -m playwright install --with-deps chromium; fi
+      - name: Run tests (core subset)
+        if: matrix.playw == 'none'
+        run: pytest -q -k 'not playwright'
+      - name: Run full tests (with Playwright)
+        if: matrix.playw == 'with'
         run: pytest -q
