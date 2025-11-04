@@ -44,13 +44,15 @@ def test_box_builder_vanilla_mode():
 
     # Start app in background
     with run_app_in_thread(app) as base_url:
+        if sync_playwright is None:
+            pytest.skip("Playwright not installed")
         with sync_playwright() as pw:
             try:
                 browser = pw.chromium.launch(headless=True)
             except Exception as e:  # Browser not installed or launch failure -> skip
                 pytest.skip(f"Chromium launch failed: {e}")
             page = browser.new_page()
-            page.goto(f"{base_url}/box-builder", wait_until="domcontentloaded")
+            page.goto(f"{base_url}/box-builder?test=1", wait_until="domcontentloaded")
 
             # Wait for either lemonade render or fallback message
             # Spinner should eventually disappear

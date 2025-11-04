@@ -1,0 +1,20 @@
+[
+  {
+    "source": "crutchfield",
+    "url": "https://www.crutchfield.com/p_1234/Test-Sub.html",
+    "brand": "BrandX",
+    "model": "ModelY 8\" Subwoofer",
+    "size_in": 8.0,
+    "rms_w": 300,
+    "peak_w": null,
+    "impedance_ohm": null,
+    "sensitivity_db": null,
+    "mounting_depth_in": null,
+    "cutout_diameter_in": null,
+    "displacement_cuft": null,
+    "recommended_box": null,
+    "price_usd": 199.99,
+    "image": null,
+    "scraped_at": 1762219111.7357278
+  }
+]

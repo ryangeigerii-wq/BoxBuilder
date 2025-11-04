@@ -9,6 +9,110 @@ Minimal FastAPI backend skeleton.
 - Basic test using `TestClient`
 - Manufacturer scraping endpoints (Sundown & JL Audio 8" subs) with synthetic fallback and enrichment mock test.
 
+## Portability & Fresh Clone Guide
+The repository is now structured so a fresh clone can run both backend and front-end + scraping tests with minimal setup. Follow this order for a clean environment bring‑up on a new machine (Windows PowerShell examples shown):
+
+### 1. Clone & Base Python Environment
+```powershell
+git clone https://github.com/<your-org>/BoxBuilder.git
+cd BoxBuilder
+python -m venv .venv
+./.venv/Scripts/Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2. (Optional) Install Playwright Browsers
+Playwright tests auto-skip if the browser isn’t installed. Install to run the 3D/UI smoke tests:
+```powershell
+python -m playwright install chromium
+```
+
+### 3. (Optional) Node / Jest Front-End Unit Tests
+If `package.json` is present (Jest/ESLint toolchain):
+```powershell
+npm install
+npm test   # Runs Jest port math tests
+```
+
+### 4. Run Python Test Suite
+```powershell
+pytest -q
+```
+Expected result: all tests pass; some are skipped if Playwright/browser not installed. Current known benign warnings:
+* Pytest async warnings for tests using `@pytest.mark.asyncio` (no plugin required—pure asyncio)
+* Deprecation notices from upstream libraries (pydantic / Starlette) — slated for a future cleanup.
+
+### 5. Launch Dev Server
+```powershell
+uvicorn main:app --reload
+```
+Visit: http://127.0.0.1:8000/box-builder and verify:
+* Spinner hides
+* 3D preview canvas renders (no enable toggle required)
+* Dual sub layout adds two hole cylinders
+* Export endpoints reachable via /docs
+
+### 6. Quick Verification Checklist (Fresh Clone)
+| Check | Expectation |
+|-------|-------------|
+| `pytest -q` | Pass (Playwright tests may skip) |
+| `/admin/routes` | JSON listing with >30 routes |
+| `/subwoofers/cutout/12` | Returns heuristic 11.16 dia (0.93×) |
+| `/export/basic-svg` (POST width/height) | 200 + ETag header |
+| `/export/pdf` | Returns PDF starting with %PDF (if reportlab installed) |
+| 3D view | Canvas + hole cylinders present |
+
+### 7. Large / Generated Artifacts
+The `subwoofers/8/snapshot_*.json` files are large scrape snapshots produced by tests or exploratory runs. They are useful for diffing parser changes but not required for a minimal runnable clone. You can:
+* Keep the most recent snapshot pair only.
+* Add older snapshots to `.gitignore` or prune before commit.
+
+Suggested `.gitignore` additions (optional):
+```
+subwoofers/8/snapshot_*.json
+output/svg_box/*.svg
+output/dxf_box/*.dxf
+output/svg_cutsheets/*.svg
+output/dxf_cutsheets/*.dxf
+output/cut_sheets/*.pdf
+```
+Retain directories themselves so code paths creating them do not fail.
+
+### 8. Staging & Committing (PowerShell)
+Group staging to keep commit concise:
+```powershell
+git add README.md main.py app/ tests/ subwoofers/index.json subwoofers/8/latest.json
+git add subwoofers/8/snapshot_2025*.json   # if you choose to keep snapshots
+git commit -m "portability: add tests, snapshots, and README fresh clone guide"
+```
+
+### 9. Common Post-Clone Issues
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Playwright tests all skip | Browsers not installed | Run `python -m playwright install chromium` |
+| 3D preview blank | GPU/WebGL blocked or missing `three_preview.js` | Check Network tab for 404, disable strict corporate GPU policy |
+| PDF endpoint 500 | `reportlab` missing | `pip install -r requirements.txt` |
+| Many large JSON snapshots | Legacy scrape outputs | Prune or gitignore older ones |
+| Async warning spam in tests | Pytest default warning; no plugin | Accept for now; will tighten with future config |
+
+### 10. Planned Portability Enhancements
+* Consolidate very large Playwright test files (reduce per‑file LOC) for faster cold clone install.
+* Introduce `pytest --maxfail=1 -q` default in CI to shorten failure feedback.
+* Add optional `scripts/cleanup_snapshots.py` for pruning stale snapshot_* files by age.
+* Switch deprecation warnings to strict mode after upgrading libraries.
+
+### 11. Minimal Smoke Commands (Copy/Paste)
+```powershell
+pytest tests/test_sundown.py::test_sundown_basic_shape -q
+pytest tests/test_export_vector.py::test_vector_exports -q
+pytest tests/test_routes_index.py::test_admin_routes_index -q
+```
+
+If all three pass, the core API, export system, and routing registry are healthy.
+
+---
+
 ## Project Layout
 ```
 BoxBuilder/

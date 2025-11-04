@@ -61,3 +61,18 @@ debug_sundown_sample.html
 Thumbs.db
 Desktop.ini
 *.ps1.tmp
+
+# Large scrape snapshots (retain only newest if desired)
+subwoofers/8/snapshot_*.json
+
+# Generated export artifacts (recreated on demand)
+output/svg_box/
+output/dxf_box/
+output/svg_cutsheets/
+output/dxf_cutsheets/
+output/cut_sheets/
+output/temp/
+output/textures/
+
+# Local cache variants
+*.cache

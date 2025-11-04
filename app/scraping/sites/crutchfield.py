@@ -2,6 +2,7 @@
 from typing import List
 from bs4 import BeautifulSoup
 import httpx
+from app.scraping.http_utils import ensure_async_client, aclose_safely
 from app.schemas.subwoofer import SubwooferSchema
 
 BASE_URL = "https://www.crutchfield.com"
@@ -9,21 +10,28 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 async def scrape_crutchfield_subwoofers(pages: int = 5) -> List[SubwooferSchema]:
+    """Scrape simplified listing cards from Crutchfield.
+
+    Uses HTTP/2 when available for improved connection reuse and header compression.
+    Falls back transparently if the remote server does not negotiate h2.
+    """
     results: List[SubwooferSchema] = []
-    async with httpx.AsyncClient(headers=HEADERS, timeout=15.0) as client:
+    client = await ensure_async_client(headers=HEADERS, timeout=15.0, http2=True)
+    try:
         for page in range(1, pages + 1):
             url = f"{BASE_URL}/shopsearch/subwoofers.html?pg={page}"
-            resp = await client.get(url)
-            if resp.status_code != 200:
+            try:
+                resp = await client.get(url)
+            except Exception:
                 continue
-            soup = BeautifulSoup(resp.text, "html.parser")
+            if getattr(resp, 'status_code', 200) != 200:
+                continue
+            soup = BeautifulSoup(getattr(resp, 'text', ''), "html.parser")
             for item in soup.select(".cf-productcard"):
                 name_tag = item.select_one(".cf-productcard-title")
                 price_tag = item.select_one(".cf-price")
                 link_tag = name_tag.get("href") if name_tag else None
-
                 if name_tag and link_tag:
-                    # Normalize and clean
                     name = name_tag.get_text(strip=True)
                     price_text = price_tag.get_text(strip=True) if price_tag else None
                     price = _parse_price(price_text) if price_text else None
@@ -36,6 +44,8 @@ async def scrape_crutchfield_subwoofers(pages: int = 5) -> List[SubwooferSchema]
                             source="crutchfield",
                         )
                     )
+    finally:
+        await aclose_safely(client)
     return results
 
 

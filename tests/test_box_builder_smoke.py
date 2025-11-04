@@ -34,13 +34,15 @@ def run_app_in_thread(app: FastAPI, host: str = "127.0.0.1", port: int = 8877):
 def test_box_builder_vanilla_smoke():
     """Vanilla builder smoke: spinner hides, inputs enabled, metrics update, reset buttons present."""
     with run_app_in_thread(fastapi_app) as base_url:
+        if sync_playwright is None:
+            pytest.skip("Playwright not installed")
         with sync_playwright() as pw:
             try:
                 browser = pw.chromium.launch(headless=True)
             except Exception as e:
                 pytest.skip(f"Chromium launch failed: {e}")
             page = browser.new_page()
-            page.goto(f"{base_url}/box-builder", wait_until="domcontentloaded")
+            page.goto(f"{base_url}/box-builder?test=1", wait_until="domcontentloaded")
 
             # Wait for spinner hide/remove
             spinner_ok = False
@@ -69,6 +71,6 @@ def test_box_builder_vanilla_smoke():
 
             # Reset buttons
             assert page.locator('button[name="stateReset"]').count() == 1, 'State Reset button missing'
-            assert page.locator('button[name="serverReset"]').count() == 1, 'Server Reset button missing'
+            assert page.locator('#previewResetBtn').count() == 1, 'Preview Reset button missing'
 
             browser.close()

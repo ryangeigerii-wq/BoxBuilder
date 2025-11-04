@@ -22,45 +22,170 @@
         </nav>
     </header>
 
-    <main class="content">
+    <main class="content admin-dashboard">
         <section class="actions">
             <a href="/box-builder" class="button primary">Build Box</a>
-            <a href="#folders" class="button secondary">Jump to Workspace</a>
+            <a href="#admin-panels" class="button secondary">Jump to Admin Panels</a>
         </section>
 
-        <section id="folders" class="workspace">
-            <h2>Workspace</h2>
-            <p class="section-desc">Organize future tools, presets, saved boxes, materials and calculators here.</p>
-            <div class="folder-grid">
-                <div class="folder">
-                    <h3>Presets</h3>
-                    <p>Common box sizes and recommended volumes.</p>
-                    <a href="/boxes/create-box" class="mini-link">View default box</a>
+        <section id="admin-panels" class="admin-panels">
+            <h2>Admin Dashboard</h2>
+            <p class="section-desc">Operational overview & maintenance actions.</p>
+            <div class="admin-grid">
+                <div class="panel" id="routes-panel">
+                    <h3>Registered Routes</h3>
+                    <p class="mini-desc">Fetched from <code>/admin/routes</code>.</p>
+                    <button type="button" id="refresh-routes" class="mini-btn">Refresh Routes</button>
+                    <div class="scroll-box" id="routes-list" aria-live="polite"
+                        style="max-height:220px;overflow:auto;font-size:.75rem;border:1px solid #2d485b;padding:.5rem;border-radius:4px;background:#f9fbfc;">
+                        Loading…</div>
                 </div>
-                <div class="folder">
-                    <h3>Subwoofer Data</h3>
-                    <p>Scraped specs from Crutchfield and other sources.</p>
-                    <a href="/subwoofers/crutchfield?pages=1" class="mini-link">Fetch subs</a>
+                <div class="panel" id="metrics-panel">
+                    <h3>Scraper Metrics</h3>
+                    <p class="mini-desc">Live stats from <code>/subwoofers/metrics</code>.</p>
+                    <button type="button" id="refresh-metrics" class="mini-btn">Refresh Metrics</button>
+                    <pre id="metrics-json"
+                        style="max-height:220px;overflow:auto;background:#1e2630;color:#cfe6ff;padding:.6rem;border-radius:4px;font-size:.7rem;">Loading…</pre>
                 </div>
-                <div class="folder">
-                    <h3>Saved Designs</h3>
-                    <p>Coming soon: save and revisit custom enclosures.</p>
+                <div class="panel" id="picker-panel">
+                    <h3>Subwoofer Picker Preview</h3>
+                    <p class="mini-desc">Condensed entries (<code>/subwoofers/picker</code>).</p>
+                    <button type="button" id="refresh-picker" class="mini-btn">Refresh Picker</button>
+                    <table class="mini-table" aria-label="Subwoofer picker preview"
+                        style="width:100%;font-size:.7rem;border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Model</th>
+                                <th>Size</th>
+                                <th>RMS</th>
+                                <th>Price</th>
+                                <th>Src</th>
+                            </tr>
+                        </thead>
+                        <tbody id="picker-body">
+                            <tr>
+                                <td colspan="6">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="folder">
-                    <h3>Materials</h3>
-                    <p>Panel thickness, bracing, damping calculators.</p>
+                <div class="panel" id="maintenance-panel">
+                    <h3>Maintenance</h3>
+                    <p class="mini-desc">One-click purge of test / legacy Crutchfield records.</p>
+                    <button type="button" id="purge-btn" class="button danger" style="margin-bottom:.5rem;">Purge Test &
+                        Crutchfield Data</button>
+                    <div id="purge-result" style="font-size:.7rem;opacity:.85;min-height:1.2rem;"></div>
+                    <hr style="margin:.75rem 0;" />
+                    <h4 style="margin:0 0 .35rem;font-size:.8rem;">Workspace (Legacy)</h4>
+                    <p class="section-desc" style="font-size:.65rem;margin-top:0;">Original workspace panels retained
+                        below for continuity & existing tests.</p>
+                    <div id="folders" class="workspace legacy-workspace">
+                        <h2 style="font-size:1rem;margin-top:1rem;">Workspace</h2>
+                        <div class="folder-grid">
+                            <div class="folder">
+                                <h3>Presets</h3>
+                                <p>Common box sizes.</p><a href="/boxes/create-box" class="mini-link">View default
+                                    box</a>
+                            </div>
+                            <div class="folder">
+                                <h3>Subwoofer Data</h3>
+                                <p>Scraped specs sources.</p><a href="/subwoofers/crutchfield?pages=1"
+                                    class="mini-link">Fetch subs</a>
+                            </div>
+                            <div class="folder">
+                                <h3>Saved Designs</h3>
+                                <p>Coming soon.</p>
+                            </div>
+                            <div class="folder">
+                                <h3>Materials</h3>
+                                <p>Bracing & damping.</p>
+                            </div>
+                            <div class="folder">
+                                <h3>Export</h3>
+                                <p>Cut sheets & PDFs.</p>
+                            </div>
+                            <div class="folder placeholder">
+                                <h3>More</h3>
+                                <p>Future features.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="folder">
-                    <h3>Export</h3>
-                    <p>Generate cut sheets and build PDFs.</p>
+                <div class="panel" id="viewbox-panel">
+                    <h3>Common SVG ViewBoxes</h3>
+                    <p class="mini-desc">Copy & optionally override export sizing (?vb=WIDTHxHEIGHT).</p>
+                    <table class="mini-table" style="font-size:.6rem;">
+                        <thead>
+                            <tr>
+                                <th>Preset</th>
+                                <th>viewBox</th>
+                                <th>Copy</th>
+                                <th>Link</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vb-body">
+                            <tr data-vb="480x360">
+                                <td>Default</td>
+                                <td>0 0 480 360</td>
+                                <td><button class="mini-btn copy-vb" data-vb="480x360">Copy</button></td>
+                                <td><a class="mini-btn" href="/box-builder?vb=480x360">Open</a></td>
+                            </tr>
+                            <tr data-vb="640x480">
+                                <td>4:3 Large</td>
+                                <td>0 0 640 480</td>
+                                <td><button class="mini-btn copy-vb" data-vb="640x480">Copy</button></td>
+                                <td><a class="mini-btn" href="/box-builder?vb=640x480">Open</a></td>
+                            </tr>
+                            <tr data-vb="800x450">
+                                <td>16:9 Wide</td>
+                                <td>0 0 800 450</td>
+                                <td><button class="mini-btn copy-vb" data-vb="800x450">Copy</button></td>
+                                <td><a class="mini-btn" href="/box-builder?vb=800x450">Open</a></td>
+                            </tr>
+                            <tr data-vb="512x512">
+                                <td>Square</td>
+                                <td>0 0 512 512</td>
+                                <td><button class="mini-btn copy-vb" data-vb="512x512">Copy</button></td>
+                                <td><a class="mini-btn" href="/box-builder?vb=512x512">Open</a></td>
+                            </tr>
+                            <tr data-vb="900x600">
+                                <td>Large 3:2</td>
+                                <td>0 0 900 600</td>
+                                <td><button class="mini-btn copy-vb" data-vb="900x600">Copy</button></td>
+                                <td><a class="mini-btn" href="/box-builder?vb=900x600">Open</a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="copy-vb-status" style="margin-top:.4rem;font-size:.55rem;min-height:1rem;opacity:.75;">
+                    </div>
                 </div>
-                <div class="folder placeholder">
-                    <h3>More</h3>
-                    <p>Room for future features.</p>
+                <div class="panel" id="custom-presets-panel">
+                    <h3>Saved Custom Presets</h3>
+                    <p class="mini-desc">User-defined configurations stored locally. Click to open or delete.</p>
+                    <button type="button" id="refresh-custom-presets" class="mini-btn">Refresh</button>
+                    <table class="mini-table" style="font-size:.6rem;width:100%;margin-top:.4rem;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Dims</th>
+                                <th>Subs</th>
+                                <th>Port</th>
+                                <th>Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="custom-presets-body">
+                            <tr>
+                                <td colspan="6">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="custom-presets-status"
+                        style="font-size:.55rem;margin-top:.4rem;min-height:1rem;opacity:.75;"></div>
                 </div>
             </div>
         </section>
-
     </main>
 
     <footer class="site-footer">
@@ -68,9 +193,95 @@
     </footer>
     <!-- Vanilla builder uses only box_builder.js on the builder page; no global framework needed -->
     <script>
-        const origin = { x, y };
-        const scale = scale; // existing scale variable
-        const { x: dispX, y: dispY } = toPx(hx - state.width / 2, hy - state.height / 2, scale, { x: x + dispW / 2, y: y + dispH / 2 });
+        // Admin dashboard client logic (lightweight, no build tooling)
+        (function () {
+            async function fetchJSON(url) {
+                try { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return await r.json(); } catch (e) { return null; }
+            }
+            // Routes
+            function setBadge(el, type, text) { if (!el) return; el.className = ''; el.classList.add(type + '-badge'); el.textContent = text; }
+            async function loadRoutes() {
+                const box = document.getElementById('routes-list'); if (!box) return;
+                box.innerHTML = '<span class="spinner" aria-hidden="true"></span> <span class="loading-badge">Loading</span>';
+                const data = await fetchJSON('/admin/routes');
+                if (!data) { box.innerHTML = '<span class="error-badge">Failed</span>'; return; }
+                const rows = data.routes.map(r => `${r.methods.join(',')} ${r.path}`).join('\n');
+                box.textContent = rows || 'No routes';
+            }
+            // Metrics
+            async function loadMetrics() {
+                const pre = document.getElementById('metrics-json'); if (!pre) return;
+                pre.innerHTML = '<span class="spinner" aria-hidden="true"></span> Loading…';
+                const data = await fetchJSON('/subwoofers/metrics');
+                if (!data) { pre.innerHTML = '<span class="error-badge">Failed to load metrics</span>'; return; }
+                pre.textContent = JSON.stringify(data, null, 2);
+            }
+            // Picker preview
+            async function loadPicker() {
+                const body = document.getElementById('picker-body'); if (!body) return;
+                body.innerHTML = '<tr><td colspan="6"><span class="spinner" aria-hidden="true"></span> Loading…</td></tr>';
+                const data = await fetchJSON('/subwoofers/picker?limit=20');
+                if (!data) { body.innerHTML = '<tr><td colspan="6"><span class="error-badge">Failed</span></td></tr>'; return; }
+                if (!data.items.length) { body.innerHTML = '<tr><td colspan="6"><span class="loading-badge">Empty</span></td></tr>'; return; }
+                body.innerHTML = data.items.map(i => `<tr><td>${i.brand || ''}</td><td>${i.model || ''}</td><td>${i.size_in || ''}</td><td>${i.rms_w || ''}</td><td>${i.price_usd ?? ''}</td><td>${i.source}</td></tr>`).join('');
+            }
+            // Purge
+            async function doPurge() {
+                if (!window.confirm('Purge all test & Crutchfield data? This cannot be undone.')) return;
+                const resBox = document.getElementById('purge-result');
+                resBox.innerHTML = '<span class="spinner" aria-hidden="true"></span> <span class="loading-badge">Purging…</span>';
+                try {
+                    const r = await fetch('/subwoofers/purge', { method: 'POST' });
+                    const data = await r.json();
+                    if (r.ok) {
+                        resBox.innerHTML = `<span class='success-badge'>Removed ${data.removed}</span> <span style='opacity:.65;'>Remaining ${data.after}</span>`;
+                    } else {
+                        resBox.innerHTML = '<span class="error-badge">Failed</span>';
+                    }
+                    loadMetrics(); loadPicker();
+                } catch (e) { resBox.innerHTML = '<span class="error-badge">Error</span>'; }
+            }
+            document.getElementById('refresh-routes')?.addEventListener('click', loadRoutes);
+            document.getElementById('refresh-metrics')?.addEventListener('click', loadMetrics);
+            document.getElementById('refresh-picker')?.addEventListener('click', loadPicker);
+            document.getElementById('purge-btn')?.addEventListener('click', doPurge);
+            // Copy viewBox helpers
+            document.querySelectorAll('.copy-vb').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const vb = btn.getAttribute('data-vb');
+                    try { await navigator.clipboard.writeText(`0 0 ${vb.replace('x', ' ')}`); const st = document.getElementById('copy-vb-status'); if (st) { st.innerHTML = `<span class='success-badge'>Copied viewBox ${vb}</span>`; setTimeout(() => { st.textContent = ''; }, 1800); } } catch (e) { const st = document.getElementById('copy-vb-status'); if (st) { st.innerHTML = `<span class='error-badge'>Copy failed</span>`; } }
+                });
+            });
+            // Custom saved presets
+            async function loadCustomPresets() {
+                const body = document.getElementById('custom-presets-body');
+                const status = document.getElementById('custom-presets-status');
+                if (!body) return; body.innerHTML = `<tr><td colspan='6'><span class="spinner" aria-hidden="true"></span> Loading…</td></tr>`;
+                const data = await fetchJSON('/presets');
+                if (!data) { body.innerHTML = `<tr><td colspan='6'><span class='error-badge'>Failed</span></td></tr>`; return; }
+                if (!data.items.length) { body.innerHTML = `<tr><td colspan='6'><span class='loading-badge'>None saved</span></td></tr>`; return; }
+                const fmt = ts => { try { return new Date(ts * 1000).toLocaleTimeString(); } catch (e) { return '?'; } };
+                body.innerHTML = data.items.map(it => {
+                    const cfgDims = it.config ? `${it.config.width || '?'}×${it.config.height || '?'}×${it.config.depth || '?'}` : '?';
+                    const subs = it.config ? (it.config.layout === 'dual' ? 'Dual' : 'Single') + ' ' + (it.config.subSize || '') + '"' : '?';
+                    const port = it.config && it.config.port && it.config.port.enabled ? (it.config.port.type || 'slot') : '-';
+                    return `<tr data-id='${it.id}'><td><a href='/box-builder?preset=${it.id}'>${it.name}</a></td><td>${cfgDims}</td><td>${subs}</td><td>${port}</td><td>${fmt(it.updated_at)}</td><td><button class='mini-btn danger del-preset' data-id='${it.id}'>Del</button></td></tr>`;
+                }).join('');
+                status.textContent = `${data.items.length} preset(s)`;
+            }
+            document.getElementById('refresh-custom-presets')?.addEventListener('click', loadCustomPresets);
+            document.addEventListener('click', async e => {
+                const btn = e.target.closest('.del-preset');
+                if (!btn) return; const id = btn.getAttribute('data-id'); if (!id) return;
+                if (!confirm('Delete preset?')) return;
+                try { const r = await fetch('/presets/' + id, { method: 'DELETE' }); if (r.ok) { loadCustomPresets(); } } catch (err) { }
+            });
+            // Listen for cross-tab save events
+            window.addEventListener('storage', ev => { if (ev.key === 'lastPresetSaved') loadCustomPresets(); });
+            loadCustomPresets();
+            // Initial load
+            loadRoutes(); loadMetrics(); loadPicker();
+        })();
     </script>
 </body>
 
