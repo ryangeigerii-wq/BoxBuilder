@@ -448,6 +448,7 @@
       const container = document.getElementById('finish-section');
       if (!container) return; // graceful if markup absent
       const hiddenFinishInput = container.querySelector('input[type="hidden"][name="finish"]') || form.querySelector('input[type="hidden"][name="finish"]');
+      const legacySelect = container.querySelector('select[name="finish"]') || form.querySelector('select[name="finish"]');
       const buttons = container.querySelectorAll('.apply-finish');
       if (!buttons.length) return;
       function reflect() {
@@ -465,6 +466,11 @@
           if (state.finish === val) return; // already active
           state.finish = val;
           if (hiddenFinishInput) hiddenFinishInput.value = val;
+          // Update legacy select so three_preview.js receives change event
+          if (legacySelect && legacySelect.value !== val) {
+            legacySelect.value = val;
+            legacySelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
           pushHistory('finishChanged');
           reflect();
           // Notify 3D preview or any listeners
