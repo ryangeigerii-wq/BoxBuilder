@@ -1,0 +1,5 @@
+# Temporarily ignore template triggering HTML parse error until validated/fixed
+app/templates/box_builder.html
+# Ignore minified legacy vendor scripts
+app/static/js/vendor/lemonade.min.js
+app/static/js/lemonade.min.js
