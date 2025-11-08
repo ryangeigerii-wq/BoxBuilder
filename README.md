@@ -4,10 +4,18 @@ Minimal FastAPI backend skeleton.
 
 ## Features
 - Settings management via `pydantic` (`app/core/config.py`)
-- Modular routers (`app/api/routes`) for health and box creation
+- Modular routers (`app/api/routes`) for health, box creation, exports, ports, subwoofers
 - Separation of concerns: models vs schemas
-- Basic test using `TestClient`
-- Manufacturer scraping endpoint (JL Audio 8" subs) with synthetic fallback.
+- Basic API + 3D builder UI tests (Playwright optional)
+- Local-only subwoofer data (ALL external manufacturer scraping removed; keep your own dataset in `data/subwoofers.json`).
+
+> NOTE: External manufacturer scraping (Crutchfield, JL Audio, Sundown, Sonic Electronix) has been fully removed to simplify maintenance and eliminate flaky network‑bound tests. The only remaining subwoofer endpoints are:
+> * `GET /subwoofers` (and `/subwoofers/search`) – local filtered search
+> * `GET /subwoofers/cutout/{nominal}` – heuristic 0.93× cutout diameter (override via `actual_spec`)
+> * `GET /subwoofers/picker` – condensed list for UI selection
+> * `GET /subwoofers/sample` – first N records (no auto-seed)
+>
+> To add data populate `data/subwoofers.json` with an array of objects matching the `Subwoofer` dataclass fields (extra fields ignored).
 
 ## Portability & Fresh Clone Guide
 The repository is now structured so a fresh clone can run both backend and front-end + scraping tests with minimal setup. Follow this order for a clean environment bring‑up on a new machine (Windows PowerShell examples shown):
@@ -142,11 +150,8 @@ uvicorn main:app --reload
 ```
 Open http://127.0.0.1:8000/docs for interactive API docs.
 
-### Scraping Quick Start
-```powershell
-curl http://127.0.0.1:8000/subwoofers/jlaudio
-```
-Synthetic fallback returns representative models if live fetch blocked.
+### (Removed) Scraping Quick Start
+All manufacturer scraping endpoints were retired. Any prior README instructions invoking `/subwoofers/jlaudio`, `/crutchfield/*`, `/sonic/*` or size/collect endpoints are obsolete. Replace them by manually curating `data/subwoofers.json`.
 
 ### Server Immediate Shutdown Troubleshooting
 If the server starts then immediately logs "Shutting down":
@@ -156,64 +161,68 @@ If the server starts then immediately logs "Shutting down":
 - The `/admin/restart` endpoint only triggers exit when explicitly posted to.
 If persistent, run a minimal stub to verify environment signal behavior.
 
-## GitHub Actions & Pages Deployment
+## GitHub Actions & GitHub Pages Deployment
 
-This repository includes two workflows located in `.github/workflows`:
+This repository includes two primary workflows in `.github/workflows`:
 
-1. `ci.yml` — Runs on push and PR to `main`. Sets up Python 3.11, installs dependencies, and executes `pytest -q` for the full test suite.
-2. `pages.yml` — Builds a static snapshot of the box builder and deploys it to GitHub Pages. Triggered on push to `main` or manually via workflow dispatch.
+1. `ci.yml` — Continuous Integration: installs dependencies and runs the test suite (`pytest -q`).
+2. `pages.yml` — Static Builder Deployment: builds a backend‑free snapshot of the box builder UI into `dist/` and deploys it to GitHub Pages.
+
+### Deployment Mode Switched (Jekyll → Static App)
+The previous Jekyll docs deployment has been retired. GitHub Pages now serves the interactive builder (static client-only) instead of a generated documentation site. All documentation remains in the repository for local reference (`README.md`, `agents.md`, `docs/`), but the live Pages URL focuses on the tool itself.
+
+Rationale for Switch:
+* Reduced build time (no Ruby/Jekyll dependency chain).
+* Direct access to the builder for users without cloning the repo.
+* Elimination of duplicate workflows and accidental README rendering.
 
 ### Static Build Details
-The static build script `scripts/build_pages.py` produces a `dist/` folder containing:
-- `index.html` (derived from `app/templates/box_builder.html` with an injected offline banner and JS patch)
-- `static/` assets (CSS/JS/images) copied from `app/static`
+The script `scripts/build_pages.py` produces:
+* `dist/index.html` — based on `app/templates/box_builder.html` with an offline banner and patch script.
+* `dist/static/` — copied assets from `app/static`.
+* `.nojekyll` — prevents Jekyll processing so paths resolve as-is.
 
-Because GitHub Pages does not run the FastAPI backend, server-only features are disabled:
-- Port compute button request to `/ports/design` returns a placeholder JSON response (via a fetch monkey patch).
-- Admin restart button is disabled.
-- Local heuristic port overlay continues to function (pure client-side logic).
+Because GitHub Pages cannot run the FastAPI backend, server-only features are downgraded:
+* Port compute button calls to `/ports/design` are intercepted and return placeholder JSON.
+* Admin restart button is disabled.
+* Local heuristic port overlay & front-end tuning math continue to function (pure client-side logic).
 
-When viewing the Pages site (e.g. `https://<username>.github.io/BoxBuilder/`):
-- A detection script in `box_builder.js` disables server actions.
-- The UI label for the compute button changes to `Compute (offline)`.
-
-### Manually Running the Static Build Locally
+### Manual Local Static Preview
 ```powershell
 python -m venv .venv
 ./.venv/Scripts/Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements.txt  # optional; script uses only stdlib
 python scripts/build_pages.py
 ```
-Then open `dist/index.html` in a browser. (Note: relative `/static/...` paths expect the site to be served from the repository root. For file:// viewing, some browsers may block font/image loads; use a lightweight HTTP server if needed.)
+Open `dist/index.html` in your browser. For better asset handling use a simple HTTP server (e.g. `python -m http.server` from the `dist/` directory).
 
 ### Verifying Pages Deployment
-After a push to `main`:
-1. Navigate to the Actions tab; confirm `CI` succeeded.
-2. Open the `Deploy Pages` workflow run; ensure both `build` and `deploy` jobs are green.
-3. Visit the environment URL shown under the `github-pages` deployment.
-4. Confirm the following in the Pages site:
-  - Spinner fades and disappears.
-  - Port compute button is disabled and shows offline text.
-  - Local port overlays appear when internal view + tuning inputs are provided.
-  - No network errors for `/ports/design` (requests are intercepted client-side).
+After pushing to `main`:
+1. Check the Actions tab: `CI` passes.
+2. Open the latest `Deploy Static Box Builder` workflow run; confirm `build` and `deploy` succeeded.
+3. Visit the published Pages URL and verify:
+   * Spinner hides after initialization.
+   * Compute button shows `Compute (offline)` and is disabled.
+   * No failed network requests to backend routes (404/500) in DevTools.
+   * Port overlay renders correctly when enabled.
 
-### Common Pages Issues
-| Symptom | Cause | Mitigation |
-|---------|-------|-----------|
-| 404 for /static assets | Paths changed or not copied | Ensure `scripts/build_pages.py` ran and `dist/static` exists |
-| Compute button still enabled | JS patch not injected | Re-run build; verify `index.html` contains the injected `<script>` snippet |
-| Broken images | Case-sensitive path mismatch | Verify filenames in `app/static/img` and references match exactly |
-| Styles not applied | CSS not copied or cached | Clear browser cache or add a query parameter (cache bust) manually |
-| README.md served instead of builder | GitHub Pages defaulting to repo root without index or incorrect base path | Ensure `dist/index.html` created; script now injects `<base href="/BoxBuilder/">` and rewrites `/static/` → `static/`; redeploy |
+### Common Static Issues & Fixes
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| 404 for assets | `dist/static` missing | Re-run build script; ensure copy succeeded |
+| Compute button active | Patch script injection failed | Confirm `<script>` snippet in `index.html` before `</body>` |
+| README served | Old Pages artifact from Jekyll | Ensure new workflow ran; remove stale `_site` artifact if cached |
+| Broken relative paths | Missing `<base>` tag | Verify `index.html` contains `<base href="/BoxBuilder/">` |
 
-### Extending Static Export
-Enhancements you can add:
-- Add a lightweight service worker to cache static assets for offline usage.
-- Generate a `manifest.json` for PWA install support.
-- Export additional HTML variants (e.g. simplified builder without port section) by extending `build_pages.py`.
+### Extending the Static Export
+Potential enhancements:
+* Service worker for offline caching & versioning.
+* `manifest.json` for PWA installation.
+* Additional stripped-down builder variants (e.g., no port design) placed in `dist/variants/`.
+* SHA-256 hash emission for each asset to enable subresource integrity tags.
 
 ### Security Notes
-The static export removes active backend calls; no user data is collected. Any future analytics should be explicitly opt-in and separate from core builder logic.
+The static export performs no backend calls and stores no user data. Any future telemetry should be explicitly opt-in.
 
 ---
 
