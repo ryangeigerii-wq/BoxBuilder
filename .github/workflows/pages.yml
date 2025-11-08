@@ -1,4 +1,4 @@
-name: Deploy Jekyll
+name: Deploy Jekyll (docs directory)
 on:
   push:
     branches: [ main ]
@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Display working tree root (debug)
+        run: ls -al . && ls -al docs || true
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -28,6 +30,8 @@ jobs:
       - name: Build site
         working-directory: docs
         run: bundle exec jekyll build -d _site
+      - name: List built site contents (debug)
+        run: ls -al docs/_site | head -100
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
