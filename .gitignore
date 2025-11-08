@@ -71,6 +71,11 @@ output/dxf_cutsheets/
 output/cut_sheets/
 output/temp/
 output/textures/
+output/preview_pdfs/
+
+# Jekyll build output & bundler state
+docs/_site/
+docs/.bundle/
 
 # Local cache variants
 *.cache
