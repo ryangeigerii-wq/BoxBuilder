@@ -1,0 +1,30 @@
+# Python virtual environments
+.venv/
+__pycache__/
+*.pyc
+
+# Node / front-end
+node_modules/
+.npm/
+
+# Git / VCS
+.git
+.gitignore
+
+# Local artifacts & exports
+output/
+dist/
+coverage/
+*.log
+
+# Jekyll build (legacy docs)
+docs/_site/
+docs/.bundle/
+
+# Playwright / test cache
+.playwright/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

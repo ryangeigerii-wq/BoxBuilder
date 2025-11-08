@@ -224,6 +224,59 @@ Potential enhancements:
 ### Security Notes
 The static export performs no backend calls and stores no user data. Any future telemetry should be explicitly opt-in.
 
+## Docker Usage
+
+Containerization support is included via a multi-stage `Dockerfile` and `docker-compose.yml`.
+
+### Build & Run (Single Container)
+```powershell
+docker build -t boxbuilder:latest .
+docker run --rm -p 8000:8000 boxbuilder:latest
+```
+Visit http://localhost:8000/docs and http://localhost:8000/box-builder.
+
+### Compose (API + Static Export)
+`docker-compose.yml` defines two services:
+* `api` – FastAPI backend served by uvicorn on port 8000.
+* `static` – Builds the offline static site (runs `scripts/build_pages.py`) and serves it on port 8080 via Python's built-in HTTP server.
+
+Run both:
+```powershell
+docker compose up --build
+```
+Endpoints:
+* Live API: http://localhost:8000/health
+* Static UI: http://localhost:8080/index.html
+
+Stop services:
+```powershell
+docker compose down
+```
+
+### Healthchecks
+The runtime container exposes `/health` for liveness; compose adds a healthcheck using `curl`.
+
+### Development Bind Mount
+The compose file mounts the repo read-only (`./:/app:ro`). Modify locally; rebuild image when Python deps change.
+
+### Image Size & Layers
+Base stage installs dependencies once; runtime stage copies site-packages. For dependency changes rebuild with `--no-cache`:
+```powershell
+docker build --no-cache -t boxbuilder:latest .
+```
+
+### Common Issues
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| 500 on start | Missing dependency | Confirm `requirements.txt` includes needed libs; rebuild image |
+| Healthcheck failing | Endpoint path mismatch | Ensure `/health` route present; adjust HEALTHCHECK if renamed |
+| Port not reachable | Local port in use | Change host port mapping (`-p 9000:8000`) |
+| Static service empty | Build script error | Check container logs `docker compose logs static` |
+
+### Extending
+Add an Nginx reverse proxy or a Traefik label for routing; add a volume for persistent exports (`output/`) if server-side generation is desired inside the container.
+
+
 ---
 
 ## Tests

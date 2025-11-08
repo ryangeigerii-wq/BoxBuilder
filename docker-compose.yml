@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  api:
+    build: .
+    container_name: boxbuilder_api
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      UVICORN_WORKERS: 2
+    volumes:
+      - ./:/app:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  # Optional static site build + serve with python simple server
+  static:
+    build: .
+    container_name: boxbuilder_static
+    command: bash -c "python scripts/build_pages.py && python -m http.server 8080 --directory dist"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/app:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
