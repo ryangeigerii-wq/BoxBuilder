@@ -12,6 +12,10 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - node_modules
+  # Exclude bundled gems so Jekyll does not try to build template artifacts inside
+  # vendor/bundle (was causing invalid date error from jekyll's site_template _posts).
+  - vendor
+  - vendor/bundle
 
 # SEO tag hints
 lang: en
